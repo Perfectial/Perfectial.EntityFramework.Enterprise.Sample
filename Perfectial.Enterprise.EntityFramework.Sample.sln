@@ -1,0 +1,83 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{B9148EB1-044F-442C-AC23-B6ADD1E3FB2E}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\NuGet.Config = .nuget\NuGet.Config
+		.nuget\NuGet.exe = .nuget\NuGet.exe
+		.nuget\NuGet.targets = .nuget\NuGet.targets
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.Infrastructure.Services", "Perfectial.Business.Services\Perfectial.Infrastructure.Services.csproj", "{DEF11430-393A-4735-858E-214873A27F6E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.Infrastructure.Utils", "Perfectial.Business.Utils\Perfectial.Infrastructure.Utils.csproj", "{FE5BDEB0-2CE9-49AA-B308-A54D0775E122}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.Web", "Perfectial.Web\Perfectial.Web.csproj", "{E193A0E9-AF78-4817-A2D8-F51A6AEB0983}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.Common", "Perfectial.Infrastructure\Perfectial.Common.csproj", "{910B5260-9741-477C-B77B-68BC622AC8E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.Core.Services.Interfaces", "Perfectial.Business.Services.Interfaces\Perfectial.Core.Services.Interfaces.csproj", "{EA144684-9584-4C0A-9C32-49D6B2BAF061}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.UnitTests.Services", "Perfectial.UnitTests\Perfectial.UnitTests.Services.csproj", "{9E56C30A-1200-4C7F-B379-801004AC877E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.DataAccess.EntityFramework", "Perfectial.DataAccess.EntityFramework\Perfectial.DataAccess.EntityFramework.csproj", "{9DDC1B6C-E57F-4699-BD95-E108847AA3C2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.DataAccess.Implementation", "Perfectial.DataAccess.Implementation\Perfectial.DataAccess.Implementation.csproj", "{BCD94CFB-8286-4BD1-8D88-C34C0C48C9EC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.DataAccess.Interfaces", "Perfectial.DataAccess.Interfaces\Perfectial.DataAccess.Interfaces.csproj", "{90D4492B-ABD8-4FE6-9F15-44ACAFFD8828}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.Core.Domain", "Perfectial.Business.Domain\Perfectial.Core.Domain.csproj", "{07D2360F-4C6C-4902-8D6D-DCFEF8333616}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DEF11430-393A-4735-858E-214873A27F6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DEF11430-393A-4735-858E-214873A27F6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DEF11430-393A-4735-858E-214873A27F6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DEF11430-393A-4735-858E-214873A27F6E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE5BDEB0-2CE9-49AA-B308-A54D0775E122}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE5BDEB0-2CE9-49AA-B308-A54D0775E122}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE5BDEB0-2CE9-49AA-B308-A54D0775E122}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE5BDEB0-2CE9-49AA-B308-A54D0775E122}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E193A0E9-AF78-4817-A2D8-F51A6AEB0983}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E193A0E9-AF78-4817-A2D8-F51A6AEB0983}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E193A0E9-AF78-4817-A2D8-F51A6AEB0983}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E193A0E9-AF78-4817-A2D8-F51A6AEB0983}.Release|Any CPU.Build.0 = Release|Any CPU
+		{910B5260-9741-477C-B77B-68BC622AC8E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{910B5260-9741-477C-B77B-68BC622AC8E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{910B5260-9741-477C-B77B-68BC622AC8E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{910B5260-9741-477C-B77B-68BC622AC8E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA144684-9584-4C0A-9C32-49D6B2BAF061}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA144684-9584-4C0A-9C32-49D6B2BAF061}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA144684-9584-4C0A-9C32-49D6B2BAF061}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA144684-9584-4C0A-9C32-49D6B2BAF061}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E56C30A-1200-4C7F-B379-801004AC877E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E56C30A-1200-4C7F-B379-801004AC877E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E56C30A-1200-4C7F-B379-801004AC877E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E56C30A-1200-4C7F-B379-801004AC877E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DDC1B6C-E57F-4699-BD95-E108847AA3C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DDC1B6C-E57F-4699-BD95-E108847AA3C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DDC1B6C-E57F-4699-BD95-E108847AA3C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DDC1B6C-E57F-4699-BD95-E108847AA3C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCD94CFB-8286-4BD1-8D88-C34C0C48C9EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCD94CFB-8286-4BD1-8D88-C34C0C48C9EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCD94CFB-8286-4BD1-8D88-C34C0C48C9EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCD94CFB-8286-4BD1-8D88-C34C0C48C9EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90D4492B-ABD8-4FE6-9F15-44ACAFFD8828}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90D4492B-ABD8-4FE6-9F15-44ACAFFD8828}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90D4492B-ABD8-4FE6-9F15-44ACAFFD8828}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90D4492B-ABD8-4FE6-9F15-44ACAFFD8828}.Release|Any CPU.Build.0 = Release|Any CPU
+		{07D2360F-4C6C-4902-8D6D-DCFEF8333616}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07D2360F-4C6C-4902-8D6D-DCFEF8333616}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07D2360F-4C6C-4902-8D6D-DCFEF8333616}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07D2360F-4C6C-4902-8D6D-DCFEF8333616}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
