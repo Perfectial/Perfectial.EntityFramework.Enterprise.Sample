@@ -1,0 +1,182 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>EntityFramework.Commands</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.Data.Entity.Design.Internal.ForwardingProxy`1">
+            <summary>
+                This is a small piece of Remoting magic. It enables us to invoke methods on a
+                remote object without knowing its actual type. The only restriction is that the
+                names and shapes of the types and their members must be the same on each side of
+                the boundary.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Design.Internal.ForwardingProxy`1.Invoke(System.Runtime.Remoting.Messaging.IMessage)">
+            <summary>
+                Intercepts method invocations on the object represented by the current instance
+                and forwards them to the target to finish processing.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.DuplicateMigrationName(System.Object)">
+            <summary>
+            The name '{migrationName}' is used by an existing migration.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Data.Entity.Internal.CommandsStrings.MultipleContexts">
+            <summary>
+            More than one DbContext was found. Specify which one to use.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.MultipleContextsWithName(System.Object)">
+            <summary>
+            More than one DbContext named '{name}' was found. Specify which one to use by providing its fully qualified name.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.MultipleContextsWithQualifiedName(System.Object)">
+            <summary>
+            More than one DbContext named '{name}' was found. Specify which one to use by providing its fully qualified name using its exact case.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Data.Entity.Internal.CommandsStrings.NoContext">
+            <summary>
+            No DbContext was found. Ensure that you're using the correct assembly and that the type is neither abstract nor generic.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.NoContextWithName(System.Object)">
+            <summary>
+            No DbContext named '{name}' was found.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.LogUseContext(System.Object)">
+            <summary>
+            Using context '{name}'.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Data.Entity.Internal.CommandsStrings.ManuallyDeleted">
+            <summary>
+            A manual migration deletion was detected.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.NoMigrationFile(System.Object,System.Object)">
+            <summary>
+            No file named '{file}' was found. You must manually remove the migration class '{migrationClass}'.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.NoMigrationMetadataFile(System.Object)">
+            <summary>
+            No file named '{file}' was found.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Data.Entity.Internal.CommandsStrings.NoSnapshot">
+            <summary>
+            No ModelSnapshot was found.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.NoSnapshotFile(System.Object,System.Object)">
+            <summary>
+            No file named '{file}' was found. You must manually remove the model snapshot class '{snapshotClass}'.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.RemovingMigration(System.Object)">
+            <summary>
+            Removing migration '{name}'.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Data.Entity.Internal.CommandsStrings.RemovingSnapshot">
+            <summary>
+            Removing model snapshot.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Data.Entity.Internal.CommandsStrings.RevertingSnapshot">
+            <summary>
+            Reverting model snapshot.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.UnapplyMigration(System.Object)">
+            <summary>
+            The migration '{name}' has already been applied to the database. Unapply it and try again. If the migration has been applied to other databases, consider reverting its changes using a new migration.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.UnknownOperation(System.Object)">
+            <summary>
+            The current CSharpMigrationOperationGenerator cannot scaffold operations of type '{operationType}'. Configure your services to use one that can.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.UnknownLiteral(System.Object)">
+            <summary>
+            The current CSharpHelper cannot scaffold literals of type '{literalType}'. Configure your services to use one that can.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.CannotFindRuntimeProviderAssembly(System.Object)">
+            <summary>
+            Unable to find provider assembly with name {assemblyName}. Ensure the specified name is correct and is referenced by the project.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Data.Entity.Internal.CommandsStrings.DestructiveOperation">
+            <summary>
+            An operation was scaffolded that may result in the loss of data. Please review the migration for accuracy.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.ReusingDirectory(System.Object)">
+            <summary>
+            Reusing directory of file '{file}'.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.WritingMigration(System.Object)">
+            <summary>
+            Writing migration to '{file}'.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.WritingSnapshot(System.Object)">
+            <summary>
+            Writing model snapshot to '{file}'.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Data.Entity.Internal.CommandsStrings.Done">
+            <summary>
+            Done.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.ReusingNamespace(System.Object)">
+            <summary>
+            Reusing namespace of type '{type}'.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.ReusingSnapshotName(System.Object)">
+            <summary>
+            Reusing model snapshot name '{name}'.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.CannotFindDesignTimeProviderAssembly(System.Object)">
+            <summary>
+            Unable to find design-time provider assembly. Please install the {designTimeProviderAssemblyName} NuGet package and ensure that the package is referenced by the project.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.CannotFindDesignTimeProviderAssemblyAttribute(System.Object,System.Object)">
+            <summary>
+            Unable to find expected assembly attribute named {attributeName} in provider assembly {runtimeProviderAssemblyName}. This attribute is required to identify the class which acts as the design-time service provider factory.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.NonRelationalProvider(System.Object)">
+            <summary>
+            {provider} is not a Relational provider and therefore cannot be use with Migrations.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.UnreferencedAssembly(System.Object,System.Object)">
+            <summary>
+            Could not load assembly '{assembly}'. Ensure it is referenced by the startup project '{startupProject}'.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Data.Entity.Internal.CommandsStrings.LogFindingContexts">
+            <summary>
+            Finding DbContext classes...
+            </summary>
+        </member>
+        <member name="M:Microsoft.Data.Entity.Internal.CommandsStrings.ForeignMigrations(System.Object)">
+            <summary>
+            The namespace '{migrationsNamespace}' contains migrations for a different DbContext. This can result in conflicting migration names. It's reccommend to put migrations for different DbContext classes into different namespaces.
+            </summary>
+        </member>
+    </members>
+</doc>

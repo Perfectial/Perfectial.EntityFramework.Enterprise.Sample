@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6DB7E03C-872D-4852-ACF3-DFDB5F4887A2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Perfectial.Infrastructure.Identity.Base</RootNamespace>
+    <AssemblyName>Perfectial.Infrastructure.Identity.Base</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CultureAwaiterGeneric.cs" />
+    <Compile Include="IAuthenticationService.cs" />
+    <Compile Include="IClaimsIdentityFactory.cs" />
+    <Compile Include="IIdentityMessageService.cs" />
+    <Compile Include="IIdentityValidator.cs" />
+    <Compile Include="IPasswordHasher.cs" />
+    <Compile Include="IUserStore.cs" />
+    <Compile Include="IUserClaimRepository.cs" />
+    <Compile Include="IUserEmailRepository.cs" />
+    <Compile Include="IUserLockoutRepository.cs" />
+    <Compile Include="IUserLoginRepository.cs" />
+    <Compile Include="IUserPasswordRepository.cs" />
+    <Compile Include="IUserPhoneNumberStore.cs" />
+    <Compile Include="IUserRoleRepository.cs" />
+    <Compile Include="IUserSecurityStampRepository.cs" />
+    <Compile Include="IUserRepository.cs" />
+    <Compile Include="IUserTwoFactorTokenProvider.cs" />
+    <Compile Include="IUserTokenProvider.cs" />
+    <Compile Include="CultureAwaiter.cs" />
+    <Compile Include="IUserTwoFactorRepository.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Perfectial.Domain.Model\Perfectial.Domain.Model.csproj">
+      <Project>{ca6eeb2c-a2be-4fc4-b0f0-7c161118bb56}</Project>
+      <Name>Perfectial.Domain.Model</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Perfectial.Infrastructure.Identity.Model\Perfectial.Infrastructure.Identity.Model.csproj">
+      <Project>{5be1a3bd-6b56-4eed-9477-f4cfc5dc0325}</Project>
+      <Name>Perfectial.Infrastructure.Identity.Model</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Perfectial.Infrastructure.Persistence.Base\Perfectial.Infrastructure.Persistence.Base.csproj">
+      <Project>{3f61c606-a8b7-465d-af70-4a16b8eb0ff0}</Project>
+      <Name>Perfectial.Infrastructure.Persistence.Base</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

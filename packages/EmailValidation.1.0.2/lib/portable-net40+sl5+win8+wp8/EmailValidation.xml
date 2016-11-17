@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>EmailValidation</name>
+    </assembly>
+    <members>
+        <member name="T:EmailValidation.EmailValidator">
+            <summary>
+            An Email validator.
+            </summary>
+            <remarks>
+            An Email validator.
+            </remarks>
+        </member>
+        <member name="M:EmailValidation.EmailValidator.Validate(System.String,System.Boolean,System.Boolean)">
+            <summary>
+            Validate the specified email address.
+            </summary>
+            <remarks>
+            <para>Validates the syntax of an email address.</para>
+            <para>If <paramref name="allowTopLevelDomains"/> is <c>true</c>, then the validator will
+            allow addresses with top-level domains like <c>postmaster@dk</c>.</para>
+            <para>If <paramref name="allowInternational"/> is <c>true</c>, then the validator
+            will use the newer International Email standards for validating the email address.</para>
+            </remarks>
+            <returns><c>true</c> if the email address is valid; otherwise, <c>false</c>.</returns>
+            <param name="email">An email address.</param>
+            <param name="allowTopLevelDomains"><c>true</c> if the validator should allow addresses at top-level domains; otherwise, <c>false</c>.</param>
+            <param name="allowInternational"><c>true</c> if the validator should allow international characters; otherwise, <c>false</c>.</param>
+            <exception cref="T:System.ArgumentNullException">
+            <paramref name="email"/> is <c>null</c>.
+            </exception>
+        </member>
+    </members>
+</doc>
