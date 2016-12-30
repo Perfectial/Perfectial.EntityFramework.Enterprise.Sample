@@ -8,9 +8,9 @@
     {
         public override void InitializeDatabase(ApplicationDbContext context)
         {
-            /*context.Database.ExecuteSqlCommand(
+            context.Database.ExecuteSqlCommand(
                 TransactionalBehavior.DoNotEnsureTransaction,
-                $"ALTER DATABASE {context.Database.Connection.Database} SET SINGLE_USER WITH ROLLBACK IMMEDIATE");*/
+                $"ALTER DATABASE {context.Database.Connection.Database} SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
 
             base.InitializeDatabase(context);
         }

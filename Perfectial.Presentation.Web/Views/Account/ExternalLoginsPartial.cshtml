@@ -1,0 +1,40 @@
+﻿@using Microsoft.Owin.Security
+
+@model Perfectial.Presentation.Web.ViewModels.LoginViewModel
+
+<h4>Use another service to log in.</h4>
+<hr />
+@{
+    if (Model.ExternalAuthenticationTypes.Any())
+    {
+        using (Html.BeginForm("ExternalLogin", "Account", new { Model.ReturnUrl }))
+        {
+            @Html.AntiForgeryToken()
+            <div id="socialLoginList">
+                <p>
+                    @foreach (AuthenticationDescription authenticationDescription in Model.ExternalAuthenticationTypes)
+                    {
+                        <button type="submit"
+                                class="btn btn-default"
+                                id="@authenticationDescription.AuthenticationType"
+                                name="providerKey"
+                                value="@authenticationDescription.AuthenticationType"
+                                title="Log in using your @authenticationDescription.Caption account">
+                            @authenticationDescription.AuthenticationType
+                        </button>
+                    }
+                </p>
+            </div>
+        }
+
+    }
+    else
+    {
+        <div>
+            <p>
+                There are no external authentication services configured. See <a href="http://go.microsoft.com/fwlink/?LinkId=403804">this article</a>
+                for details on setting up this ASP.NET application to support logging in via external services.
+            </p>
+        </div>
+    }
+}

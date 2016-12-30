@@ -1,16 +1,12 @@
 ﻿@model Perfectial.Presentation.Web.Models.VerifyPhoneNumberViewModel
-@{
-    ViewBag.Title = "Verify Phone Number";
-}
 
-<h2>@ViewBag.Title.</h2>
+<h2>@Model.PageTitle</h2>
 
 @using (Html.BeginForm("VerifyPhoneNumber", "Manage", FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
 {
     @Html.AntiForgeryToken()
     @Html.Hidden("phoneNumber", @Model.PhoneNumber)
-    <h4>Enter verification code</h4>
-    <h5>@ViewBag.Status</h5>
+    <h4>Enter Verification Code</h4>
     <hr />
     @Html.ValidationSummary("", new { @class = "text-danger" })
     <div class="form-group">
@@ -26,6 +22,7 @@
     </div>
 }
 
-@section Scripts {
+@section Scripts 
+{
     @Scripts.Render("~/bundles/jqueryval")
 }

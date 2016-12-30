@@ -1,32 +1,24 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
-// <copyright file="HomeController.cs" company="">
-//   
-// </copyright>
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace Perfectial.Presentation.Web.Controllers
+﻿namespace Perfectial.Presentation.Web.Controllers
 {
     using System.Web.Mvc;
 
+    using Perfectial.Infrastructure.Identity.Base;
+    using Perfectial.Presentation.Web.Models;
+
     public class HomeController : Controller
     {
+        private readonly IIdentityProvider userIdentityProvider;
+
+        public HomeController(IIdentityProvider userIdentityProvider)
+        {
+            this.userIdentityProvider = userIdentityProvider;
+        }
+
         public ActionResult Index()
         {
-            return View();
-        }
+            var homeIndexViewModel = new HomeIndexViewModel(this.userIdentityProvider);
 
-        public ActionResult About()
-        {
-            ViewBag.Message = "Your application description page.";
-
-            return View();
-        }
-
-        public ActionResult Contact()
-        {
-            ViewBag.Message = "Your contact page.";
-
-            return View();
+            return this.View(homeIndexViewModel);
         }
     }
 }

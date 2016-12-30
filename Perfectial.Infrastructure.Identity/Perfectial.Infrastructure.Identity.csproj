@@ -42,6 +42,18 @@
       <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.Owin, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.3.0.1\lib\net45\Microsoft.Owin.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Security, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.Security.3.0.1\lib\net45\Microsoft.Owin.Security.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Security.Cookies, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.Security.Cookies.3.0.1\lib\net45\Microsoft.Owin.Security.Cookies.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
@@ -65,23 +77,26 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AsyncHelper.cs" />
     <Compile Include="ClaimsIdentityFactory.cs" />
     <Compile Include="CryptoPasswordHasher.cs" />
+    <Compile Include="DataProtectorTokenProvider.cs" />
+    <Compile Include="IdentityFactoryMiddleware.cs" />
+    <Compile Include="IdentityFactoryProvider.cs" />
     <Compile Include="Resource.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resource.resx</DependentUpon>
     </Compile>
     <Compile Include="MinimumLengthValidator.cs" />
-    <Compile Include="IdentityResources.cs" />
     <Compile Include="EmailTokenProvider.cs" />
     <Compile Include="Rfc6238AuthenticationService.cs" />
     <Compile Include="PhoneNumberTokenProvider.cs" />
+    <Compile Include="SecurityStampValidator.cs" />
     <Compile Include="TotpSecurityStampBasedTokenProvider.cs" />
     <Compile Include="UserRepository.cs" />
     <Compile Include="PasswordValidator.cs" />
     <Compile Include="UserTokenTwoFactorProvider.cs" />
+    <Compile Include="IdentityProvider.cs" />
     <Compile Include="UserValidator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -101,10 +116,6 @@
     <ProjectReference Include="..\Perfectial.Infrastructure.Identity.Model\Perfectial.Infrastructure.Identity.Model.csproj">
       <Project>{5be1a3bd-6b56-4eed-9477-f4cfc5dc0325}</Project>
       <Name>Perfectial.Infrastructure.Identity.Model</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Perfectial.Infrastructure.Identity.Owin\Perfectial.Infrastructure.Identity.Owin.csproj">
-      <Project>{AABA9DEE-A6AE-4BC4-B0E1-130048C2F8C8}</Project>
-      <Name>Perfectial.Infrastructure.Identity.Owin</Name>
     </ProjectReference>
     <ProjectReference Include="..\Perfectial.Infrastructure.Persistence.Base\Perfectial.Infrastructure.Persistence.Base.csproj">
       <Project>{3F61C606-A8B7-465D-AF70-4A16B8EB0FF0}</Project>

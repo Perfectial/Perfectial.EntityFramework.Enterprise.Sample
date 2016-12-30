@@ -132,10 +132,7 @@
         [Test]
         public void ShouldAddEntity()
         {
-            /*
-            * Typical usage of DbContextScope for a read-write business transaction. 
-            * It's as simple as it looks.
-            */
+            // Typical usage of DbContextScope for a read-write business transaction. It's as simple as it looks.
 
             var entity = this.CreateEntity();
             using (var dbContextScope = this.dbContextScopeFactory.Create())
@@ -167,8 +164,7 @@
         [Test]
         public void ShouldAddEntities()
         {
-            /*
-            * Example of DbContextScope nesting in action. 
+            /* Example of DbContextScope nesting in action. 
             * 
             * We already have a service method - CreateUser() - that knows how to create a new user
             * and implements all the business rules around the creation of a new user 
@@ -188,9 +184,7 @@
             * 
             * The inner DbContextScope instance that the CreateUser() method creates
             * will join our top-level scope. This ensures that the same DbContext instance is
-            * going to be used throughout this business transaction.
-            * 
-            */
+            * going to be used throughout this business transaction. */
 
             var entities = this.CreateEntities(NumberOfEntitiesToCreate);
             using (var dbParentContextScope = this.dbContextScopeFactory.Create())
@@ -229,10 +223,8 @@
         [Test]
         public void ShouldNotAddEntitiesOnFailure()
         {
-            /*
-            * Here, we'll verify that inner DbContextScopes really join the parent scope and 
-            * don't persist their changes until the parent scope completes successfully. 
-            */
+            // Here, we'll verify that inner DbContextScopes really join the parent scope and 
+            // don't persist their changes until the parent scope completes successfully.
 
             var entities = this.CreateEntities(NumberOfEntitiesToCreate);
             try
@@ -255,10 +247,9 @@
                             }
                             else
                             {
-                                // OK. So we've successfully persisted one user.
+                                // OK. So we've successfully persisted half of users. 
                                 // We're going to simulate a failure when attempting to 
-                                // persist the second user and see what ends up getting 
-                                // persisted in the DB.
+                                // persist the following user and see what ends up getting persisted in the DB.
                                 throw new InvalidOperationException($"An error occurred when attempting to create entity named '{entity.Description}' in the database.");
                             }
                         }
@@ -291,10 +282,8 @@
         [Test]
         public void ShouldNotAddEntitiesInDbTransactionOnFailure()
         {
-            /*
-            * Here, we'll verify that inner DbContextScopes really join the parent scope and 
-            * don't persist their changes until the parent scope completes successfully. 
-            */
+            // Here, we'll verify that inner DbContextScopes really join the parent scope and 
+            // don't persist their changes until the parent scope completes successfully.
 
             var entities = this.CreateEntities(NumberOfEntitiesToCreate);
             try
@@ -317,10 +306,9 @@
                             }
                             else
                             {
-                                // OK. So we've successfully persisted one user.
+                                // OK. So we've successfully persisted half of users. 
                                 // We're going to simulate a failure when attempting to 
-                                // persist the second user and see what ends up getting 
-                                // persisted in the DB.
+                                // persist the following user and see what ends up getting persisted in the DB.
                                 throw new InvalidOperationException($"An error occurred when attempting to create entity named '{entity.Description}' in the database.");
                             }
                         }
@@ -352,8 +340,7 @@
         [Test]
         public async Task ShouldGetEntitiesAsync()
         {
-            /*
-            * A very contrived example of ambient DbContextScope within an async flow.
+            /* A very contrived example of ambient DbContextScope within an async flow.
             * 
             * Note that the ConfigureAwait(false) calls here aren't strictly necessary 
             * and are unrelated to DbContextScope. You can remove them if you want and 
@@ -368,8 +355,7 @@
             * other that code in ASP.NET MVC / WebApi controllers or Window Form / WPF forms.
             * 
             * See http://blogs.msdn.com/b/pfxteam/archive/2012/04/13/10293638.aspx for 
-            * more details.
-            */
+            * more details. */
 
             var originalEntities = this.CreateEntities(NumberOfEntitiesToCreate);
             using (var dbContextParentScope = this.dbContextScopeFactory.Create())
@@ -430,12 +416,8 @@
                 Assert.IsTrue(originalEntity.Id != 0);
             }
 
-            /*
-            * An example of explicit database transaction. 
-            * 
-            * Read the comment for CreateReadOnlyWithTransaction() before using this overload
-            * as there are gotchas when doing this!
-            */
+            // An example of explicit database transaction.  
+            // Read the comment for CreateReadOnlyWithTransaction() before using this overload as there are gotchas when doing this!
 
             using (var dbContextScope = this.dbContextScopeFactory.CreateReadOnlyWithTransaction(IsolationLevel.ReadUncommitted))
             {
@@ -461,12 +443,8 @@
                 Assert.IsTrue(originalEntity.Id != 0);
             }
 
-            /*
-            * An example of explicit database transaction. 
-            * 
-            * Read the comment for CreateReadOnlyWithTransaction() before using this overload
-            * as there are gotchas when doing this!
-            */
+            // An example of explicit database transaction.  
+            // Read the comment for CreateReadOnlyWithTransaction() before using this overload as there are gotchas when doing this!
 
             using (var dbContextScope = new DbContextReadOnlyScope(IsolationLevel.ReadUncommitted))
             {

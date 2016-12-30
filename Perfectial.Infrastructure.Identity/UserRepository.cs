@@ -16,17 +16,17 @@
 
     public class UserRepository<TDbContext> : Repository<TDbContext, User, string>, IUserRepository where TDbContext : DbContext, IDbContext
     {
-        private readonly IDbSet<UserLogin> userLogins;
+        /*private readonly IDbSet<UserLogin> userLogins;
         private readonly IDbSet<UserClaim> userClaims;
         private readonly IDbSet<UserRole> userRoles;
-        private readonly IDbSet<Role> roles;
+        private readonly IDbSet<Role> roles;*/
 
         public UserRepository(IAmbientDbContextLocator ambientDbContextLocator) : base(ambientDbContextLocator)
         {
-            this.userLogins = this.DbContext.Set<UserLogin>();
+            /*this.userLogins = this.DbContext.Set<UserLogin>();
             this.userClaims = this.DbContext.Set<UserClaim>();
             this.userRoles = this.DbContext.Set<UserRole>();
-            this.roles = this.DbContext.Set<Role>();
+            this.roles = this.DbContext.Set<Role>();*/
         }
 
         public virtual async Task<User> FindByIdAsync(string userId)
@@ -39,7 +39,7 @@
 
         public virtual async Task<User> FindByNameAsync(string userName)
         {
-            var user = await this.FirstOrDefaultAsync(u => string.Equals(u.UserName, userName, StringComparison.CurrentCultureIgnoreCase));
+            var user = await this.FirstOrDefaultAsync(u => u.UserName.Equals(userName, StringComparison.CurrentCultureIgnoreCase));
             await this.LoadAggregateAsync(user);
 
             return user;
@@ -47,7 +47,7 @@
 
         public virtual async Task<User> FindByEmailAsync(string email)
         {
-            var user = await this.FirstOrDefaultAsync(u => string.Equals(u.Email, email, StringComparison.CurrentCultureIgnoreCase));
+            var user = await this.FirstOrDefaultAsync(u => u.Email.Equals(email, StringComparison.CurrentCultureIgnoreCase));
             await this.LoadAggregateAsync(user);
 
             return user;
@@ -64,7 +64,7 @@
         public virtual Task AddLoginAsync(User user, UserLinkedLogin login)
         {
             UserLogin userLogin = new UserLogin { UserId = user.Id, ProviderKey = login.ProviderKey, LoginProvider = login.LoginProvider };
-            this.userLogins.Add(userLogin);
+            this.DbContext.Set<UserLogin>().Add(userLogin);
 
             return Task.FromResult(0);
         }
@@ -89,12 +89,12 @@
             }
             else
             {
-                userLogin = await this.userLogins.SingleOrDefaultAsync(ul => ul.LoginProvider == loginProvider && ul.ProviderKey == providerKey && ul.UserId.Equals(user.Id));
+                userLogin = await this.DbContext.Set<UserLogin>().SingleOrDefaultAsync(ul => ul.LoginProvider == loginProvider && ul.ProviderKey == providerKey && ul.UserId.Equals(user.Id));
             }
 
             if (userLogin != null)
             {
-                this.userLogins.Remove(userLogin);
+                this.DbContext.Set<UserLogin>().Remove(userLogin);
             }
         }
 
@@ -103,7 +103,7 @@
             string loginProvider = login.LoginProvider;
             string providerKey = login.ProviderKey;
 
-            UserLogin userLogin = await this.userLogins.FirstOrDefaultAsync(l => l.LoginProvider == loginProvider && l.ProviderKey == providerKey);
+            UserLogin userLogin = await this.DbContext.Set<UserLogin>().FirstOrDefaultAsync(l => l.LoginProvider == loginProvider && l.ProviderKey == providerKey);
             User user;
 
             if (userLogin != null)
@@ -130,7 +130,7 @@
         public virtual Task AddClaimAsync(User user, Claim claim)
         {
             var userClaim = new UserClaim { UserId = user.Id, ClaimType = claim.Type, ClaimValue = claim.Value };
-            this.userClaims.Add(userClaim);
+            this.DbContext.Set<UserClaim>().Add(userClaim);
 
             return Task.FromResult(0);
         }
@@ -155,19 +155,19 @@
             }
             else
             {
-                claims = await this.userClaims.Where(userClaim => userClaim.ClaimValue == claimValue && userClaim.ClaimType == claimType && userClaim.UserId.Equals(user.Id))
+                claims = await this.DbContext.Set<UserClaim>().Where(userClaim => userClaim.ClaimValue == claimValue && userClaim.ClaimType == claimType && userClaim.UserId.Equals(user.Id))
                 .ToListAsync();
             }
 
             foreach (var userClaim in claims)
             {
-                this.userClaims.Remove(userClaim);
+                this.DbContext.Set<UserClaim>().Remove(userClaim);
             }
         }
 
         public virtual async Task<IList<string>> GetRolesAsync(User user)
         {
-            IQueryable<string> query = this.userRoles.Where(userRole => userRole.UserId.Equals(user.Id)).Join(this.roles, userRole => userRole.RoleId, role => role.Id, (userRole, role) => role.Name);
+            IQueryable<string> query = this.DbContext.Set<UserRole>().Where(userRole => userRole.UserId.Equals(user.Id)).Join(this.DbContext.Set<Role>(), userRole => userRole.RoleId, role => role.Id, (userRole, role) => role.Name);
 
             return await query.ToListAsync() as IList<string>;
         }
@@ -175,21 +175,21 @@
         public virtual async Task AddToRoleAsync(User user, string roleName)
         {
 
-            Role roleEntity = await this.roles.SingleOrDefaultAsync(role => role.Name.ToUpper() == roleName.ToUpper());
+            Role roleEntity = await this.DbContext.Set<Role>().SingleOrDefaultAsync(role => role.Name.ToUpper() == roleName.ToUpper());
             UserRole userRole = new UserRole { UserId = user.Id, RoleId = roleEntity.Id };
 
-            this.userRoles.Add(userRole);
+            this.DbContext.Set<UserRole>().Add(userRole);
         }
 
         public virtual async Task RemoveFromRoleAsync(User user, string roleName)
         {
-            Role roleEntity = await this.roles.SingleOrDefaultAsync(role => role.Name.ToUpper() == roleName.ToUpper());
+            Role roleEntity = await this.DbContext.Set<Role>().SingleOrDefaultAsync(role => role.Name.ToUpper() == roleName.ToUpper());
             if ((object)roleEntity != null)
             {
-                UserRole userRole = await this.userRoles.FirstOrDefaultAsync(role => roleEntity.Id.Equals(role.RoleId) && role.UserId.Equals(user.Id));
+                UserRole userRole = await this.DbContext.Set<UserRole>().FirstOrDefaultAsync(role => roleEntity.Id.Equals(role.RoleId) && role.UserId.Equals(user.Id));
                 if (userRole != null)
                 {
-                    this.userRoles.Remove(userRole);
+                    this.DbContext.Set<UserRole>().Remove(userRole);
                 }
             }
         }
@@ -198,10 +198,10 @@
         {
             bool isInRole = false;
 
-            Role role = await this.roles.SingleOrDefaultAsync(r => r.Name.ToUpper() == roleName.ToUpper());
+            Role role = await this.DbContext.Set<Role>().SingleOrDefaultAsync(r => r.Name.ToUpper() == roleName.ToUpper());
             if ((object)role != null)
             {
-                isInRole = await this.userRoles.AnyAsync(ur => ur.RoleId.Equals(role.Id) && ur.UserId.Equals(user.Id));
+                isInRole = await this.DbContext.Set<UserRole>().AnyAsync(ur => ur.RoleId.Equals(role.Id) && ur.UserId.Equals(user.Id));
             }
 
             return isInRole;
@@ -359,6 +359,8 @@
             where TEntity : class
             where TElement : class
         {
+            this.Attach(user);
+
             if (!this.GetIsCollectionLoaded(user, collectionExpression))
             {
                 await this.LoadCollection(dbSet, predicate);
@@ -382,24 +384,27 @@
 
         private async Task LoadRoles(User user)
         {
-            await this.EnsureCollectionIsLoaded(user, this.userRoles, u => u.UserRoles, userRole => userRole.UserId.Equals(user.Id));
+            await this.EnsureCollectionIsLoaded(user, this.DbContext.Set<UserRole>(), u => u.UserRoles, userRole => userRole.UserId.Equals(user.Id));
         }
 
         private async Task LoadClaims(User user)
         {
-            await this.EnsureCollectionIsLoaded(user, this.userClaims, u => u.Claims, userClaim => userClaim.UserId.Equals(user.Id));
+            await this.EnsureCollectionIsLoaded(user, this.DbContext.Set<UserClaim>(), u => u.Claims, userClaim => userClaim.UserId.Equals(user.Id));
         }
 
         private async Task LoadLogins(User user)
         {
-            await this.EnsureCollectionIsLoaded(user, this.userLogins, u => u.Logins, userLogin => userLogin.UserId.Equals(user.Id));
+            await this.EnsureCollectionIsLoaded(user, this.DbContext.Set<UserLogin>(), u => u.Logins, userLogin => userLogin.UserId.Equals(user.Id));
         }
 
         private async Task LoadAggregateAsync(User user)
         {
-            await this.LoadRoles(user);
-            await this.LoadClaims(user);
-            await this.LoadLogins(user);
+            if (user != null)
+            {
+                await this.LoadRoles(user);
+                await this.LoadClaims(user);
+                await this.LoadLogins(user);
+            }
         }
 
         /*private static class FindByIdFilterParser

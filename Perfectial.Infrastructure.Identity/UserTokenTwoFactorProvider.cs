@@ -11,11 +11,9 @@ namespace Perfectial.Infrastructure.Identity
     public class UserTokenTwoFactorProvider : IUserTokenTwoFactorProvider
     {
         private readonly Dictionary<string, IUserTokenProvider> userTokenTwoFactorProviders = new Dictionary<string, IUserTokenProvider>(); 
-        public Task RegisterTwoFactorUserTokenProviderAsync(string twoFactorProviderKey, IUserTokenProvider userTokenProvider)
+        public void RegisterTwoFactorUserTokenProvider(string twoFactorProviderKey, IUserTokenProvider userTokenProvider)
         {
             this.userTokenTwoFactorProviders[twoFactorProviderKey] = userTokenProvider;
-
-            return Task.FromResult(0);
         }
 
         public async Task<IList<string>> GetValidTwoFactorUserTokenProvidersAsync(User user)

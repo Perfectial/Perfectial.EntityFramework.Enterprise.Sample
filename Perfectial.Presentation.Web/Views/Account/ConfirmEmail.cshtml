@@ -1,10 +1,8 @@
-﻿@{
-    ViewBag.Title = "Confirm Email";
-}
+﻿@model Perfectial.Presentation.Web.ViewModels.ConfirmEmailViewModel
 
-<h2>@ViewBag.Title.</h2>
+<h2>@Model.PageTitle</h2>
 <div>
     <p>
-        Thank you for confirming your email. Please @Html.ActionLink("Click here to Log in", "Login", "Account", routeValues: null, htmlAttributes: new { id = "loginLink" })
+        Thank you for confirming your email. Please @Html.ActionLink("Click here to log in", "Login", "Account", routeValues: null, htmlAttributes: new { id = "loginLink" })
     </p>
 </div>

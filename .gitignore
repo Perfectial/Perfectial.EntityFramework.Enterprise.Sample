@@ -54,3 +54,6 @@
 /Perfectial.UnitTests.Domain/obj/Debug
 /Perfectial.UnitTests.Persistence/bin/Debug
 /Perfectial.UnitTests.Persistence/obj/Debug
+/Perfectial.Infrastructure.Identity.Base/bin/Debug
+/Perfectial.Infrastructure.Identity.Model/bin/Debug
+/Perfectial.Infrastructure.Identity.Owin/bin/Debug

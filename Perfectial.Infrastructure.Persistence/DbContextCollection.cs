@@ -277,6 +277,7 @@ namespace Perfectial.Infrastructure.Persistence
                 }
                 catch (Exception e)
                 {
+                    // TODO: Implement proper logging mechanism.
                     Debug.WriteLine(e);
                 }
             }
@@ -289,6 +290,7 @@ namespace Perfectial.Infrastructure.Persistence
                 }
                 catch (Exception e)
                 {
+                    // TODO: Implement proper logging mechanism.
                     Debug.WriteLine(e);
                 }
             }

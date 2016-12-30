@@ -43,8 +43,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.Infrastructure.I
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.Infrastructure.Identity.Model", "Perfectial.Infrastructure.Identity.Model\Perfectial.Infrastructure.Identity.Model.csproj", "{5BE1A3BD-6B56-4EED-9477-F4CFC5DC0325}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Perfectial.Infrastructure.Identity.Owin", "Perfectial.Infrastructure.Identity.Owin\Perfectial.Infrastructure.Identity.Owin.csproj", "{AABA9DEE-A6AE-4BC4-B0E1-130048C2F8C8}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -107,10 +105,6 @@ Global
 		{5BE1A3BD-6B56-4EED-9477-F4CFC5DC0325}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5BE1A3BD-6B56-4EED-9477-F4CFC5DC0325}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5BE1A3BD-6B56-4EED-9477-F4CFC5DC0325}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AABA9DEE-A6AE-4BC4-B0E1-130048C2F8C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AABA9DEE-A6AE-4BC4-B0E1-130048C2F8C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AABA9DEE-A6AE-4BC4-B0E1-130048C2F8C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AABA9DEE-A6AE-4BC4-B0E1-130048C2F8C8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -130,6 +124,5 @@ Global
 		{0C0A3ED3-497F-43BF-8378-94D63391DA91} = {CDEE263A-3C96-4699-AC62-CFAE54B20018}
 		{6DB7E03C-872D-4852-ACF3-DFDB5F4887A2} = {CDEE263A-3C96-4699-AC62-CFAE54B20018}
 		{5BE1A3BD-6B56-4EED-9477-F4CFC5DC0325} = {CDEE263A-3C96-4699-AC62-CFAE54B20018}
-		{AABA9DEE-A6AE-4BC4-B0E1-130048C2F8C8} = {CDEE263A-3C96-4699-AC62-CFAE54B20018}
 	EndGlobalSection
 EndGlobal

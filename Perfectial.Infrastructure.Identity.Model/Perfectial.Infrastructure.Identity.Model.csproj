@@ -41,10 +41,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AuthenticationType.cs" />
+    <Compile Include="ExternalLogin.cs" />
     <Compile Include="IdentityMessage.cs" />
     <Compile Include="IdentityResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SecurityToken.cs" />
+    <Compile Include="SignInStatus.cs" />
     <Compile Include="UserLinkedLogin.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

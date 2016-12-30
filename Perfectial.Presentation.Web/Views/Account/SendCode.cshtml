@@ -1,24 +1,23 @@
-﻿@model Perfectial.Presentation.Web.Models.SendCodeViewModel
-@{
-    ViewBag.Title = "Send";
-}
+﻿@model Perfectial.Presentation.Web.ViewModels.SendCodeViewModel
 
-<h2>@ViewBag.Title.</h2>
+<h2>@Model.PageTitle</h2>
 
-@using (Html.BeginForm("SendCode", "Account", new { ReturnUrl = Model.ReturnUrl }, FormMethod.Post, new { @class = "form-horizontal", role = "form" })) {
+@using (Html.BeginForm("SendCode", "Account", new { Model.ReturnUrl }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+{
     @Html.AntiForgeryToken()
-    @Html.Hidden("rememberMe", @Model.RememberMe)
+    @Html.Hidden("rememberBrowserCookie", @Model.RememberBrowserCookie)
     <h4>Send verification code</h4>
     <hr />
     <div class="row">
         <div class="col-md-8">
             Select Two-Factor Authentication Provider:
-            @Html.DropDownListFor(model => model.SelectedProvider, Model.Providers)
+            @Html.DropDownListFor(model => model.ProviderKey, Model.TwoFactorUserTokenProviderKeys)
             <input type="submit" value="Submit" class="btn btn-default" />
         </div>
     </div>
 }
 
-@section Scripts {
+@section Scripts
+{
     @Scripts.Render("~/bundles/jqueryval")
 }

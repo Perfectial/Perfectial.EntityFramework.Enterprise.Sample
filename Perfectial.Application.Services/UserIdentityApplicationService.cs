@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Globalization;
     using System.Linq;
     using System.Security.Claims;
     using System.Threading.Tasks;
@@ -10,6 +9,8 @@
     using AutoMapper;
 
     using Common.Logging;
+
+    using Microsoft.Owin.Security;
 
     using Perfectial.Application.Services.Base;
     using Perfectial.Domain.Model;
@@ -23,91 +24,116 @@
         private const string EmailConfirmationUserTokenModifier = "EmailConfirmation";
         private const string PhoneNumberConfirmationUserTokenModifier = "PhoneNumberConfirmation";
 
+        private const string IdentityClaimsNameIdentifier = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
+        private const string IdentityClaimsEmailAddressIdentifier = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
+
+        private const int DefaultMaxFailedAccessAttemptsBeforeLockout = 5;
+        private const int DefaultAccountLockoutTimeSpanInMinutes = 5;
+
+        private readonly IAuthenticationManager authenticationManager;
         private readonly IClaimsIdentityFactory claimsIdentityFactory;
         private readonly IPasswordHasher passwordHasher;
         private readonly IIdentityValidator<string> passwordIdentityValidator;
         private readonly IIdentityValidator<User> userIdentityValidator;
+        private readonly IIdentityProvider userIdentityProvider;
         private readonly IUserRepository userRepository;
         private readonly IUserTokenProvider userTokenProvider;
         private readonly IUserTokenTwoFactorProvider userTokenTwoFactorProvider;
 
         public UserIdentityApplicationService(
+            IAuthenticationManager authenticationManager,
             IClaimsIdentityFactory claimsIdentityFactory,
             IPasswordHasher passwordHasher,
             IIdentityValidator<string> passwordIdentityValidator,
             IIdentityValidator<User> userIdentityValidator,
             IUserRepository userRepository,
-            IDbContextScopeFactory dbContextScopeFactory,
             IUserTokenProvider userTokenProvider,
+            IIdentityProvider userIdentityProvider,
             IUserTokenTwoFactorProvider userTokenTwoFactorProvider,
+            IDbContextScopeFactory dbContextScopeFactory,
             IMapper mapper,
             ILog logger)
             : base(dbContextScopeFactory, mapper, logger)
         {
+            this.authenticationManager = authenticationManager;
             this.claimsIdentityFactory = claimsIdentityFactory;
             this.passwordHasher = passwordHasher;
             this.passwordIdentityValidator = passwordIdentityValidator;
             this.userIdentityValidator = userIdentityValidator;
             this.userRepository = userRepository;
             this.userTokenProvider = userTokenProvider;
+            this.userIdentityProvider = userIdentityProvider;
             this.userTokenTwoFactorProvider = userTokenTwoFactorProvider;
+
+            this.AuthenticationType = Infrastructure.Identity.Model.AuthenticationType.ApplicationCookie;
+            this.UserLockoutEnabledByDefault = true;
+            this.DefaultAccountLockoutTimeSpan = TimeSpan.FromMinutes(DefaultAccountLockoutTimeSpanInMinutes);
+            this.MaxFailedAccessAttemptsBeforeLockout = DefaultMaxFailedAccessAttemptsBeforeLockout;
         }
 
+        public string AuthenticationType { get; set; }
         public bool UserLockoutEnabledByDefault { get; set; }
         public int MaxFailedAccessAttemptsBeforeLockout { get; set; }
-        public TimeSpan DefaultAccountLockoutTimeSpan { get; set; } = TimeSpan.Zero;
-
-        public virtual async Task<ClaimsIdentity> CreateClaimsIdentityAsync(User user, string authenticationType)
-        {
-            var userRoles = await this.userRepository.GetRolesAsync(user);
-            var userClaims = await this.userRepository.GetClaimsAsync(user);
-            var claimsIdentity = await this.claimsIdentityFactory.CreateAsync(user, authenticationType, userRoles, userClaims);
-
-            return claimsIdentity;
-        }
+        public TimeSpan DefaultAccountLockoutTimeSpan { get; set; }
 
         public virtual async Task<IdentityResult> CreateAsync(User user)
         {
-            IdentityResult identityResult = await this.userIdentityValidator.ValidateAsync(user);
-            if (identityResult.IsValid)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                user.SecurityStamp = this.CreateSecurityStamp();
-                if (this.UserLockoutEnabledByDefault)
+                IdentityResult identityResult = await this.userIdentityValidator.ValidateAsync(user);
+                if (identityResult.IsValid)
                 {
-                    user.LockoutEnabled = true;
+                    user.SecurityStamp = this.CreateSecurityStamp();
+                    if (this.UserLockoutEnabledByDefault)
+                    {
+                        user.LockoutEnabled = true;
+                    }
+
+                    await this.userRepository.AddAsync(user);
+                    await dbContextScope.SaveChangesAsync();
                 }
 
-                await this.userRepository.AddAsync(user);
+                return identityResult;
             }
-
-            return identityResult;
         }
 
         public virtual async Task<IdentityResult> CreateAsync(User user, string password)
         {
-            IdentityResult identityResult = await this.UpdatePasswordAsync(user, password);
-            if (identityResult.IsValid)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                identityResult = await this.CreateAsync(user);
-            }
+                IdentityResult identityResult = await this.UpdatePasswordAsync(user, password);
+                if (identityResult.IsValid)
+                {
+                    identityResult = await this.CreateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
+                }
 
-            return identityResult;
+                return identityResult;
+            }
         }
 
         public virtual async Task<IdentityResult> UpdateAsync(User user)
         {
-            IdentityResult identityResult = await this.userIdentityValidator.ValidateAsync(user);
-            if (identityResult.IsValid)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                await this.userRepository.UpdateAsync(user);
-            }
+                IdentityResult identityResult = await this.userIdentityValidator.ValidateAsync(user);
+                if (identityResult.IsValid)
+                {
+                    await this.userRepository.UpdateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
+                }
 
-            return identityResult;
+                return identityResult;
+            }
         }
 
         public virtual async Task<IdentityResult> DeleteAsync(User user)
         {
-            await this.userRepository.DeleteAsync(user);
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
+            {
+                await this.userRepository.DeleteAsync(user);
+                await dbContextScope.SaveChangesAsync();
+            }
 
             IdentityResult identityResult = new IdentityResult(true, null);
 
@@ -116,65 +142,72 @@
 
         public virtual async Task<User> FindByIdAsync(string userId)
         {
-            var user = await this.userRepository.FindByIdAsync(userId);
+            using (this.DbContextScopeFactory.CreateReadOnly())
+            {
+                var user = await this.userRepository.FindByIdAsync(userId);
 
-            return user;
+                return user;
+            }
         }
 
         public virtual async Task<User> FindByNameAsync(string userName)
         {
-            var user = await this.userRepository.FindByNameAsync(userName);
+            using (this.DbContextScopeFactory.CreateReadOnly())
+            {
+                var user = await this.userRepository.FindByNameAsync(userName);
 
-            return user;
+                return user;
+            }
         }
 
         public virtual async Task<User> FindByNameAsync(string userName, string password)
         {
-            User user = await this.FindByNameAsync(userName);
-            if (user != null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                if (!this.VerifyHashedPassword(user, password))
+                User user = await this.FindByNameAsync(userName);
+                if (user != null)
                 {
-                    user = null;
+                    if (!this.VerifyHashedPassword(user, password))
+                    {
+                        user = null;
+                    }
                 }
-            }
 
-            return user;
+                return user;
+            }
         }
 
         public virtual async Task<bool> HasPasswordAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var userHasPassword = !string.IsNullOrEmpty(user.PasswordHash);
+
+                return userHasPassword;
             }
-
-            var userHasPassword = !string.IsNullOrEmpty(user.PasswordHash);
-
-            return userHasPassword;
         }
 
         public virtual async Task<IdentityResult> SetPasswordAsync(string userId, string password)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
-            {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
-
             IdentityResult identityResult;
-            if (string.IsNullOrEmpty(user.PasswordHash))
+
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                identityResult = await this.UpdatePasswordAsync(user, password);
-                if (identityResult.IsValid)
+                User user = await this.FindByIdAsync(userId);
+                if (string.IsNullOrEmpty(user.PasswordHash))
                 {
-                    identityResult = await this.UpdateAsync(user);
+                    identityResult = await this.UpdatePasswordAsync(user, password);
+                    if (identityResult.IsValid)
+                    {
+                        identityResult = await this.UpdateAsync(user);
+                        await dbContextScope.SaveChangesAsync();
+                    }
                 }
-            }
-            else
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.UserAlreadyHasPassword });
+                else
+                {
+                    identityResult = new IdentityResult(false, new[] { Resource.UserAlreadyHasPassword });
+                }
             }
 
             return identityResult;
@@ -182,24 +215,24 @@
 
         public virtual async Task<IdentityResult> UpdatePasswordAsync(string userId, string currentPassword, string newPassword)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
-            {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
-
             IdentityResult identityResult;
-            if (this.VerifyHashedPassword(user, currentPassword))
+
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                identityResult = await this.UpdatePasswordAsync(user, newPassword);
-                if (identityResult.IsValid)
+                User user = await this.FindByIdAsync(userId);
+                if (this.VerifyHashedPassword(user, currentPassword))
                 {
-                    identityResult = await this.UpdateAsync(user);
+                    identityResult = await this.UpdatePasswordAsync(user, newPassword);
+                    if (identityResult.IsValid)
+                    {
+                        identityResult = await this.UpdateAsync(user);
+                        await dbContextScope.SaveChangesAsync();
+                    }
                 }
-            }
-            else
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.PasswordMismatch });
+                else
+                {
+                    identityResult = new IdentityResult(false, new[] { Resource.PasswordMismatch });
+                }
             }
 
             return identityResult;
@@ -207,40 +240,39 @@
 
         public virtual async Task<IdentityResult> RemovePasswordAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                user.PasswordHash = null;
+                user.SecurityStamp = this.CreateSecurityStamp();
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
             }
-
-            user.PasswordHash = null;
-            user.SecurityStamp = this.CreateSecurityStamp();
-
-            IdentityResult identityResult = await this.UpdateAsync(user);
-
-            return identityResult;
         }
 
         public virtual async Task<IdentityResult> ResetPasswordAsync(string userId, string userToken, string newPassword)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
-            {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
-
             IdentityResult identityResult;
-            if (await this.ValidateUserTokenAsync(userId, ResetPasswordUserTokenModifier, userToken))
+
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                identityResult = await this.UpdatePasswordAsync(user, newPassword);
-                if (identityResult.IsValid)
+                User user = await this.FindByIdAsync(userId);
+                if (await this.ValidateUserTokenAsync(userId, ResetPasswordUserTokenModifier, userToken))
                 {
-                    identityResult = await this.UpdateAsync(user);
+                    identityResult = await this.UpdatePasswordAsync(user, newPassword);
+                    if (identityResult.IsValid)
+                    {
+                        identityResult = await this.UpdateAsync(user);
+                        await dbContextScope.SaveChangesAsync();
+                    }
                 }
-            }
-            else
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.InvalidToken });
+                else
+                {
+                    identityResult = new IdentityResult(false, new[] { Resource.InvalidToken });
+                }
             }
 
             return identityResult;
@@ -248,671 +280,934 @@
 
         public virtual async Task<string> GetSecurityStampAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var securityStamp = user.SecurityStamp;
+
+                return securityStamp;
             }
-
-            var securityStamp = user.SecurityStamp;
-
-            return securityStamp;
         }
 
         public virtual async Task<IdentityResult> UpdateSecurityStampAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                user.SecurityStamp = this.CreateSecurityStamp();
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
             }
-
-            user.SecurityStamp = this.CreateSecurityStamp();
-
-            IdentityResult identityResult = await this.UpdateAsync(user);
-
-            return identityResult;
         }
 
         public virtual Task<string> GenerateResetPasswordUserTokenAsync(string userId)
         {
-            var resetPasswordUserToken = this.GenerateUserTokenAsync(ResetPasswordUserTokenModifier, userId);
+            using (this.DbContextScopeFactory.CreateReadOnly())
+            {
+                var resetPasswordUserToken = this.GenerateUserTokenAsync(ResetPasswordUserTokenModifier, userId);
 
-            return resetPasswordUserToken;
+                return resetPasswordUserToken;
+            }
         }
 
         public virtual async Task<IList<UserLinkedLogin>> GetLoginsAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var userLogins = await this.userRepository.GetLoginsAsync(user);
+
+                return userLogins;
             }
-
-            var userLogins = await this.userRepository.GetLoginsAsync(user);
-
-            return userLogins;
         }
 
         public virtual async Task<IdentityResult> CreateLoginAsync(string userId, UserLinkedLogin userLinkedLogin)
         {
-            User userFoundById = await this.FindByIdAsync(userId);
-            if (userFoundById == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
+                IdentityResult identityResult;
 
-            IdentityResult identityResult;
+                User userFoundByLogin = await this.FindByLoginAsync(userLinkedLogin);
+                if (userFoundByLogin != null)
+                {
+                    identityResult = new IdentityResult(false, new[] { Resource.ExternalLoginExists });
+                }
+                else
+                {
+                    User userFoundById = await this.FindByIdAsync(userId);
 
-            User userFoundByLogin = await this.FindByLoginAsync(userLinkedLogin);
-            if (userFoundByLogin != null)
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.ExternalLoginExists });
-            }
-            else
-            {
-                await this.userRepository.AddLoginAsync(userFoundById, userLinkedLogin);
-                identityResult = await this.UpdateAsync(userFoundById);
-            }
+                    await this.userRepository.AddLoginAsync(userFoundById, userLinkedLogin);
+                    identityResult = await this.UpdateAsync(userFoundById);
+                    await dbContextScope.SaveChangesAsync();
+                }
 
-            return identityResult;
+                return identityResult;
+            }
         }
 
-        public virtual async Task<IdentityResult> RemoveLoginAsync(string userId, UserLinkedLogin userLinkedLogin)
+        public virtual async Task<IdentityResult> DeleteLoginAsync(string userId, UserLinkedLogin userLinkedLogin)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+
+                await this.userRepository.RemoveLoginAsync(user, userLinkedLogin);
+                user.SecurityStamp = this.CreateSecurityStamp();
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
             }
-
-            await this.userRepository.RemoveLoginAsync(user, userLinkedLogin);
-            user.SecurityStamp = this.CreateSecurityStamp();
-
-            IdentityResult identityResult = await this.UpdateAsync(user);
-
-            return identityResult;
         }
 
         public virtual async Task<User> FindByLoginAsync(UserLinkedLogin userLinkedLogin)
         {
-            var user = await this.userRepository.FindByLoginAsync(userLinkedLogin);
+            using (this.DbContextScopeFactory.CreateReadOnly())
+            {
+                var user = await this.userRepository.FindByLoginAsync(userLinkedLogin);
 
-            return user;
+                return user;
+            }
         }
 
         public virtual async Task<IList<Claim>> GetClaimsAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var userClaims = await this.userRepository.GetClaimsAsync(user);
+
+                return userClaims;
             }
-
-            var userClaims = await this.userRepository.GetClaimsAsync(user);
-
-            return userClaims;
         }
 
         public virtual async Task<IdentityResult> CreateClaimAsync(string userId, Claim claim)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                await this.userRepository.AddClaimAsync(user, claim);
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
             }
-
-            await this.userRepository.AddClaimAsync(user, claim);
-
-            IdentityResult identityResult = await this.UpdateAsync(user);
-
-            return identityResult;
         }
 
-        public virtual async Task<IdentityResult> RemoveClaimAsync(string userId, Claim claim)
+        public virtual async Task<IdentityResult> DeleteClaimAsync(string userId, Claim claim)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                await this.userRepository.RemoveClaimAsync(user, claim);
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
             }
-
-            await this.userRepository.RemoveClaimAsync(user, claim);
-
-            IdentityResult identityResult = await this.UpdateAsync(user);
-
-            return identityResult;
         }
 
         public virtual async Task<IList<string>> GetRolesAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var userRoles = await this.userRepository.GetRolesAsync(user);
+
+                return userRoles;
             }
-
-            var userRoles = await this.userRepository.GetRolesAsync(user);
-
-            return userRoles;
         }
 
-        public virtual async Task<IdentityResult> AddRoleAsync(string userId, string role)
+        public virtual async Task<IdentityResult> CreateRoleAsync(string userId, string role)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
+                IdentityResult identityResult;
 
-            IdentityResult identityResult;
-
-            var userRoles = await this.userRepository.GetRolesAsync(user);
-            if (userRoles.Contains(role))
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.UserAlreadyInRole });
-            }
-            else
-            {
-                await this.userRepository.AddToRoleAsync(user, role);
-                identityResult = await this.UpdateAsync(user);
-            }
-
-            return identityResult;
-        }
-
-        public virtual async Task<IdentityResult> AddRolesAsync(string userId, params string[] roles)
-        {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
-            {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
-
-            IdentityResult identityResult;
-
-            var userRoles = await this.userRepository.GetRolesAsync(user);
-            if (roles.Any(userRole => userRoles.Contains(userRole)))
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.UserAlreadyInRole });
-            }
-            else
-            {
-                foreach (var userRole in roles)
+                User user = await this.FindByIdAsync(userId);
+                var userRoles = await this.userRepository.GetRolesAsync(user);
+                if (userRoles.Contains(role))
                 {
-                    await this.userRepository.AddToRoleAsync(user, userRole);
+                    identityResult = new IdentityResult(false, new[] { Resource.UserAlreadyInRole });
+                }
+                else
+                {
+                    await this.userRepository.AddToRoleAsync(user, role);
+                    identityResult = await this.UpdateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
                 }
 
-                identityResult = await this.UpdateAsync(user);
+                return identityResult;
             }
-
-            return identityResult;
         }
 
-        public virtual async Task<IdentityResult> RemoveRoleAsync(string userId, string role)
+        public virtual async Task<IdentityResult> CreateRolesAsync(string userId, params string[] roles)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
+                IdentityResult identityResult;
 
-            IdentityResult identityResult;
-            if (!await this.userRepository.IsInRoleAsync(user, role))
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.UserNotInRole });
-            }
-            else
-            {
-                await this.userRepository.RemoveFromRoleAsync(user, role);
-                identityResult = await this.UpdateAsync(user);
-            }
-
-            return identityResult;
-        }
-
-        public virtual async Task<IdentityResult> RemoveRolesAsync(string userId, params string[] roles)
-        {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
-            {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
-
-            IdentityResult identityResult;
-
-            var userRoles = await this.userRepository.GetRolesAsync(user);
-            if (!roles.All(userRole => userRoles.Contains(userRole)))
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.UserNotInRole });
-            }
-            else
-            {
-                foreach (var userRole in roles)
+                User user = await this.FindByIdAsync(userId);
+                var userRoles = await this.userRepository.GetRolesAsync(user);
+                if (roles.Any(userRole => userRoles.Contains(userRole)))
                 {
-                    await this.userRepository.RemoveFromRoleAsync(user, userRole);
+                    identityResult = new IdentityResult(false, new[] { Resource.UserAlreadyInRole });
+                }
+                else
+                {
+                    foreach (var userRole in roles)
+                    {
+                        await this.userRepository.AddToRoleAsync(user, userRole);
+                    }
+
+                    identityResult = await this.UpdateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
                 }
 
-                identityResult = await this.UpdateAsync(user);
+                return identityResult;
             }
+        }
 
-            return identityResult;
+        public virtual async Task<IdentityResult> DeleteRoleAsync(string userId, string role)
+        {
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
+            {
+                IdentityResult identityResult;
+
+                User user = await this.FindByIdAsync(userId);
+                if (!await this.userRepository.IsInRoleAsync(user, role))
+                {
+                    identityResult = new IdentityResult(false, new[] { Resource.UserNotInRole });
+                }
+                else
+                {
+                    await this.userRepository.RemoveFromRoleAsync(user, role);
+                    identityResult = await this.UpdateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
+                }
+
+                return identityResult;
+            }
+        }
+
+        public virtual async Task<IdentityResult> DeleteRolesAsync(string userId, params string[] roles)
+        {
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
+            {
+                IdentityResult identityResult;
+
+                User user = await this.FindByIdAsync(userId);
+                var userRoles = await this.userRepository.GetRolesAsync(user);
+                if (!roles.All(userRole => userRoles.Contains(userRole)))
+                {
+                    identityResult = new IdentityResult(false, new[] { Resource.UserNotInRole });
+                }
+                else
+                {
+                    foreach (var userRole in roles)
+                    {
+                        await this.userRepository.RemoveFromRoleAsync(user, userRole);
+                    }
+
+                    identityResult = await this.UpdateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
+                }
+
+                return identityResult;
+            }
         }
 
         public virtual async Task<bool> IsInRoleAsync(string userId, string role)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var isUserInRole = await this.userRepository.IsInRoleAsync(user, role);
+
+                return isUserInRole;
             }
-
-            var isUserInRole = await this.userRepository.IsInRoleAsync(user, role);
-
-            return isUserInRole;
         }
 
         public virtual async Task<string> GetEmailAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var email = user.Email;
+
+                return email;
             }
-
-            var email = user.Email;
-
-            return email;
         }
 
         public virtual async Task<IdentityResult> SetEmailAsync(string userId, string email)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                user.Email = email;
+                user.EmailConfirmed = false;
+                user.SecurityStamp = this.CreateSecurityStamp();
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
             }
-
-            user.Email = email;
-            user.EmailConfirmed = false;
-            user.SecurityStamp = this.CreateSecurityStamp();
-
-            IdentityResult identityResult = await this.UpdateAsync(user);
-
-            return identityResult;
         }
 
         public virtual Task<User> FindByEmailAsync(string email)
         {
-            var user = this.userRepository.FindByEmailAsync(email);
+            using (this.DbContextScopeFactory.CreateReadOnly())
+            {
+                var user = this.userRepository.FindByEmailAsync(email);
 
-            return user;
+                return user;
+            }
         }
 
         public virtual Task<string> GenerateEmailConfirmationTokenAsync(string userId)
         {
-            var emailConfirmationToken = this.GenerateUserTokenAsync(EmailConfirmationUserTokenModifier, userId);
+            using (this.DbContextScopeFactory.CreateReadOnly())
+            {
+                var emailConfirmationToken = this.GenerateUserTokenAsync(EmailConfirmationUserTokenModifier, userId);
 
-            return emailConfirmationToken;
+                return emailConfirmationToken;
+            }
         }
 
         public virtual async Task<IdentityResult> ConfirmEmailAsync(string userId, string token)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
+                IdentityResult identityResult;
 
-            IdentityResult identityResult;
-            if (await this.ValidateUserTokenAsync(userId, EmailConfirmationUserTokenModifier, token))
-            {
-                user.EmailConfirmed = true;
-                identityResult = await this.UpdateAsync(user);
-            }
-            else
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.InvalidToken });
-            }
+                User user = await this.FindByIdAsync(userId);
+                if (await this.ValidateUserTokenAsync(userId, EmailConfirmationUserTokenModifier, token))
+                {
+                    user.EmailConfirmed = true;
+                    identityResult = await this.UpdateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
+                }
+                else
+                {
+                    identityResult = new IdentityResult(false, new[] { Resource.InvalidToken });
+                }
 
-            return identityResult;
+                return identityResult;
+            }
         }
 
         public virtual async Task<bool> IsEmailConfirmedAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var emailIsConfirmed = user.EmailConfirmed;
+
+                return emailIsConfirmed;
             }
-
-            var emailIsConfirmed = user.EmailConfirmed;
-
-            return emailIsConfirmed;
         }
 
         public virtual async Task<string> GetPhoneNumberAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var phoneNumber = user.PhoneNumber;
+
+                return phoneNumber;
             }
-
-            var phoneNumber = user.PhoneNumber;
-
-            return phoneNumber;
         }
 
         public virtual async Task<IdentityResult> SetPhoneNumberAsync(string userId, string phoneNumber)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                user.PhoneNumber = phoneNumber;
+                user.EmailConfirmed = false;
+                user.SecurityStamp = this.CreateSecurityStamp();
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
             }
-
-            user.PhoneNumber = phoneNumber;
-            user.EmailConfirmed = false;
-            user.SecurityStamp = this.CreateSecurityStamp();
-
-            IdentityResult identityResult = await this.UpdateAsync(user);
-
-            return identityResult;
         }
 
         public virtual async Task<IdentityResult> UpdatePhoneNumberAsync(string userId, string phoneNumber, string token)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
+                IdentityResult identityResult;
 
-            IdentityResult identityResult;
-            if (await this.ValidateUserTokenAsync(userId, phoneNumber, token))
-            {
-                user.PhoneNumber = phoneNumber;
-                user.PhoneNumberConfirmed = true;
-                user.SecurityStamp = this.CreateSecurityStamp();
+                User user = await this.FindByIdAsync(userId);
+                if (await this.ValidateUserTokenAsync(userId, phoneNumber, token))
+                {
+                    user.PhoneNumber = phoneNumber;
+                    user.PhoneNumberConfirmed = true;
+                    user.SecurityStamp = this.CreateSecurityStamp();
 
-                identityResult = await this.UpdateAsync(user);
-            }
-            else
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.InvalidToken });
-            }
+                    identityResult = await this.UpdateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
+                }
+                else
+                {
+                    identityResult = new IdentityResult(false, new[] { Resource.InvalidToken });
+                }
 
-            return identityResult;
+                return identityResult;
+            }
         }
 
         public virtual async Task<bool> IsPhoneNumberConfirmedAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var phoneNumberConfirmed = user.PhoneNumberConfirmed;
+
+                return phoneNumberConfirmed;
             }
-
-            var phoneNumberConfirmed = user.PhoneNumberConfirmed;
-
-            return phoneNumberConfirmed;
         }
 
         public virtual Task<string> GeneratePhoneNumberConfirmationTokenAsync(string userId, string phoneNumber)
         {
-            var phoneNumberConfirmationToken = this.GenerateUserTokenAsync(PhoneNumberConfirmationUserTokenModifier, userId);
-
-            return phoneNumberConfirmationToken;
-        }
-
-        public virtual async Task RegisterTwoFactorUserTokenProviderAsync(string twoFactorProviderKey, IUserTokenProvider provider)
-        {
-            await this.userTokenTwoFactorProvider.RegisterTwoFactorUserTokenProviderAsync(twoFactorProviderKey, provider);
-        }
-
-        public virtual async Task<IList<string>> GetValidTwoFactorUserTokenProvidersAsync(string userId)
-        {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                var phoneNumberConfirmationToken = this.GenerateUserTokenAsync(PhoneNumberConfirmationUserTokenModifier, userId);
+
+                return phoneNumberConfirmationToken;
             }
-
-            var validTwoFactorUserTokenProviders = await this.userTokenTwoFactorProvider.GetValidTwoFactorUserTokenProvidersAsync(user);
-
-            return validTwoFactorUserTokenProviders;
         }
 
-        public virtual async Task<string> GenerateTwoFactorUserTokenProviderAsync(string userId, string twoFactorProviderKey)
+        public virtual void RegisterTwoFactorAuthenticationProvider(string twoFactorProviderKey, IUserTokenProvider provider)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
-            {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
-
-            var twoFactorUserToken = await this.userTokenTwoFactorProvider.GenerateTwoFactorUserTokenAsync(twoFactorProviderKey, user);
-
-            return twoFactorUserToken;
+            this.userTokenTwoFactorProvider.RegisterTwoFactorUserTokenProvider(twoFactorProviderKey, provider);
         }
 
-        public virtual async Task<bool> ValidateTwoFactorUserTokenProviderAsync(string userId, string twoFactorProviderKey, string token)
+        public virtual async Task<IList<string>> GetValidTwoFactorAuthenticationProvidersAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var validTwoFactorUserTokenProviders = await this.userTokenTwoFactorProvider.GetValidTwoFactorUserTokenProvidersAsync(user);
+
+                return validTwoFactorUserTokenProviders;
             }
-
-            var twoFactorUserTokenIsValid = await this.userTokenTwoFactorProvider.ValidateTwoFactorUserTokenAsync(twoFactorProviderKey, user, token);
-
-            return twoFactorUserTokenIsValid;
         }
 
-        public virtual async Task NotifyTwoFactorUserTokenProviderAsync(string userId, string twoFactorProviderKey, string token)
+        public virtual async Task<string> GenerateTwoFactorAuthenticationUserTokenAsync(string userId, string twoFactorProviderKey)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
+                User user = await this.FindByIdAsync(userId);
+                var twoFactorUserToken = await this.userTokenTwoFactorProvider.GenerateTwoFactorUserTokenAsync(twoFactorProviderKey, user);
 
-            await this.userTokenTwoFactorProvider.NotifyTwoFactorUserTokenAsync(twoFactorProviderKey, user, token);
+                return twoFactorUserToken;
+            }
         }
 
-        public virtual async Task<bool> GetTwoFactorEnabledAsync(string userId)
+        public virtual async Task<bool> ValidateTwoFactorAuthenticationProviderAsync(string userId, string twoFactorProviderKey, string token)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var twoFactorUserTokenIsValid = await this.userTokenTwoFactorProvider.ValidateTwoFactorUserTokenAsync(twoFactorProviderKey, user, token);
+
+                return twoFactorUserTokenIsValid;
             }
-
-            var twoFactorUserTokenAuthenticationIsEnabled = user.TwoFactorEnabled;
-
-            return twoFactorUserTokenAuthenticationIsEnabled;
         }
 
-        public virtual async Task<IdentityResult> SetTwoFactorEnabledAsync(string userId, bool twoFactorUserTokenAuthenticationIsEnabled)
+        public virtual async Task NotifyTwoFactorAuthenticationProviderAsync(string userId, string twoFactorProviderKey, string token)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+
+                await this.userTokenTwoFactorProvider.NotifyTwoFactorUserTokenAsync(twoFactorProviderKey, user, token);
             }
+        }
 
-            user.TwoFactorEnabled = twoFactorUserTokenAuthenticationIsEnabled;
-            user.SecurityStamp = this.CreateSecurityStamp();
+        public virtual async Task<bool> GetTwoFactorUserTokenAuthenticationIsEnabledAsync(string userId)
+        {
+            using (this.DbContextScopeFactory.CreateReadOnly())
+            {
+                User user = await this.FindByIdAsync(userId);
+                var twoFactorUserTokenAuthenticationIsEnabled = user.TwoFactorEnabled;
 
-            IdentityResult identityResult = await this.UpdateAsync(user);
+                return twoFactorUserTokenAuthenticationIsEnabled;
+            }
+        }
 
-            return identityResult;
+        public virtual async Task<IdentityResult> SetTwoFactorUserTokenAuthenticationEnabledAsync(string userId, bool twoFactorUserTokenAuthenticationIsEnabled)
+        {
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
+            {
+                User user = await this.FindByIdAsync(userId);
+                user.TwoFactorEnabled = twoFactorUserTokenAuthenticationIsEnabled;
+                user.SecurityStamp = this.CreateSecurityStamp();
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
+            }
         }
 
         public virtual async Task<bool> IsLockedOutAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
+                User user = await this.FindByIdAsync(userId);
 
-            bool userIsLockedOut;
-            if (!user.LockoutEnabled)
-            {
-                userIsLockedOut = false;
-            }
-            else
-            {
-                userIsLockedOut = user.LockoutEndDateUtc >= DateTimeOffset.UtcNow;
-            }
+                bool userIsLockedOut;
+                if (!user.LockoutEnabled)
+                {
+                    userIsLockedOut = false;
+                }
+                else
+                {
+                    userIsLockedOut = user.LockoutEndDateUtc >= DateTimeOffset.UtcNow;
+                }
 
-            return userIsLockedOut;
+                return userIsLockedOut;
+            }
         }
 
         public virtual async Task<bool> GetLockoutEnabledAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var lockoutIsEnabled = user.LockoutEnabled;
+
+                return lockoutIsEnabled;
             }
-
-            var lockoutIsEnabled = user.LockoutEnabled;
-
-            return lockoutIsEnabled;
         }
 
         public virtual async Task<IdentityResult> SetLockoutEnabledAsync(string userId, bool lockoutIsEnabled)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                user.LockoutEnabled = lockoutIsEnabled;
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
             }
-
-            user.LockoutEnabled = lockoutIsEnabled;
-
-            IdentityResult identityResult = await this.UpdateAsync(user);
-
-            return identityResult;
         }
 
         public virtual async Task<DateTimeOffset> GetLockoutEndDateAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var lockoutEndDate = user.LockoutEndDateUtc.HasValue ?
+                    new DateTimeOffset(DateTime.SpecifyKind(user.LockoutEndDateUtc.Value, DateTimeKind.Utc)) :
+                    new DateTimeOffset();
+
+                return lockoutEndDate;
             }
-
-            var lockoutEndDate = user.LockoutEndDateUtc.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(user.LockoutEndDateUtc.Value, DateTimeKind.Utc)) : new DateTimeOffset();
-
-            return lockoutEndDate;
         }
 
         public virtual async Task<IdentityResult> SetLockoutEndDateAsync(string userId, DateTimeOffset lockoutEndDate)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
+                IdentityResult identityResult;
 
-            IdentityResult identityResult;
-            if (!user.LockoutEnabled)
-            {
-                identityResult = new IdentityResult(false, new[] { Resource.LockoutNotEnabled });
-            }
-            else
-            {
-                user.LockoutEndDateUtc = lockoutEndDate == DateTimeOffset.MinValue ? new DateTime?() : lockoutEndDate.UtcDateTime;
-                identityResult = await this.UpdateAsync(user);
-            }
+                User user = await this.FindByIdAsync(userId);
+                if (!user.LockoutEnabled)
+                {
+                    identityResult = new IdentityResult(false, new[] { Resource.LockoutNotEnabled });
+                }
+                else
+                {
+                    user.LockoutEndDateUtc = lockoutEndDate == DateTimeOffset.MinValue ? new DateTime?() : lockoutEndDate.UtcDateTime;
+                    identityResult = await this.UpdateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
+                }
 
-            return identityResult;
+                return identityResult;
+            }
         }
 
         public virtual async Task<IdentityResult> IncrementAccessFailedAttemptsAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                int accessFailedAttempts = user.AccessFailedCount++;
+                if (accessFailedAttempts >= this.MaxFailedAccessAttemptsBeforeLockout)
+                {
+                    user.LockoutEndDateUtc = DateTimeOffset.UtcNow.Add(this.DefaultAccountLockoutTimeSpan).UtcDateTime;
+                    user.AccessFailedCount = 0;
+                }
+
+                IdentityResult identityResult = await this.UpdateAsync(user);
+                await dbContextScope.SaveChangesAsync();
+
+                return identityResult;
             }
-
-            int accessFailedAttempts = user.AccessFailedCount++;
-            if (accessFailedAttempts >= this.MaxFailedAccessAttemptsBeforeLockout)
-            {
-                user.LockoutEndDateUtc = DateTimeOffset.UtcNow.Add(this.DefaultAccountLockoutTimeSpan).UtcDateTime;
-                user.AccessFailedCount = 0;
-            }
-
-            IdentityResult identityResult = await this.UpdateAsync(user);
-
-            return identityResult;
         }
 
         public virtual async Task<IdentityResult> ResetAccessFailedAttemptsAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
-            }
+                IdentityResult identityResult;
 
-            IdentityResult identityResult;
-            if (user.AccessFailedCount == 0)
-            {
-                identityResult = new IdentityResult(true, null);
-            }
-            else
-            {
-                user.AccessFailedCount = 0;
-                identityResult = await this.UpdateAsync(user);
-            }
+                User user = await this.FindByIdAsync(userId);
+                if (user.AccessFailedCount == 0)
+                {
+                    identityResult = new IdentityResult(true, null);
+                }
+                else
+                {
+                    user.AccessFailedCount = 0;
+                    identityResult = await this.UpdateAsync(user);
+                    await dbContextScope.SaveChangesAsync();
+                }
 
-            return identityResult;
+                return identityResult;
+            }
         }
 
         public virtual async Task<int> GetAccessFailedAttemptsAsync(string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var accessFailedAttempts = user.AccessFailedCount;
+
+                return accessFailedAttempts;
             }
-
-            var accessFailedAttempts = user.AccessFailedCount;
-
-            return accessFailedAttempts;
         }
 
         public virtual async Task<bool> ValidateUserTokenAsync(string userId, string modifier, string userToken)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var userTokenIsValid = await this.userTokenProvider.ValidateAsync(modifier, user, userToken);
+
+                return userTokenIsValid;
             }
-
-            var userTokenIsValid = await this.userTokenProvider.ValidateAsync(modifier, user, userToken);
-
-            return userTokenIsValid;
         }
 
         public virtual async Task<string> GenerateUserTokenAsync(string purpose, string userId)
         {
-            User user = await this.FindByIdAsync(userId);
-            if (user == null)
+            using (this.DbContextScopeFactory.CreateReadOnly())
             {
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, Resource.UserIdNotFound, userId));
+                User user = await this.FindByIdAsync(userId);
+                var userToken = await this.userTokenProvider.GenerateAsync(purpose, user);
+
+                return userToken;
+            }
+        }
+
+        public async Task<SignInStatus> SignInAsync(User user, bool isPersistentCookie, bool rememberBrowserCookie)
+        {
+            SignInStatus signInStatus;
+
+            ClaimsIdentity userClaimsIdentity = await this.CreateUserClaimsIdentityAsync(user);
+            this.authenticationManager.SignOut(Infrastructure.Identity.Model.AuthenticationType.ExternalCookie, Infrastructure.Identity.Model.AuthenticationType.TwoFactorCookie);
+
+            if (rememberBrowserCookie)
+            {
+                ClaimsIdentity rememberBrowserUserClaimsIdentity = this.CreateUserClaimsIdentity(user.Id, Infrastructure.Identity.Model.AuthenticationType.TwoFactorRememberBrowserCookie);
+                this.authenticationManager.SignIn(new AuthenticationProperties { IsPersistent = isPersistentCookie }, userClaimsIdentity, rememberBrowserUserClaimsIdentity);
+
+                signInStatus = SignInStatus.Success;
+            }
+            else
+            {
+                this.authenticationManager.SignIn(new AuthenticationProperties { IsPersistent = isPersistentCookie }, userClaimsIdentity);
+
+                signInStatus = SignInStatus.Success;
             }
 
-            var userToken = await this.userTokenProvider.GenerateAsync(purpose, user);
+            return signInStatus;
+        }
 
-            return userToken;
+        public async Task<string> GetTwoFactorAuthenticationUserIdAsync()
+        {
+            string verifiedUserId = string.Empty;
+
+            AuthenticateResult authenticateResult = await this.authenticationManager.AuthenticateAsync(Infrastructure.Identity.Model.AuthenticationType.TwoFactorCookie);
+            if (authenticateResult?.Identity != null)
+            {
+                verifiedUserId = this.userIdentityProvider.GetUserId(authenticateResult.Identity);
+            }
+
+            return verifiedUserId;
+        }
+
+        public async Task<bool> SendTwoFactorAuthenticationUserTokenAsync(string twoFactorProviderKey)
+        {
+            bool twoFactorCodeIsSent = false;
+
+            string userId = await this.GetTwoFactorAuthenticationUserIdAsync();
+            if (userId != null)
+            {
+                using (this.DbContextScopeFactory.CreateReadOnly())
+                {
+                    User user = await this.userRepository.FindByIdAsync(userId);
+                    if (user != null)
+                    {
+                        var twoFactorUserToken = await this.userTokenTwoFactorProvider.GenerateTwoFactorUserTokenAsync(twoFactorProviderKey, user);
+                        await this.userTokenTwoFactorProvider.NotifyTwoFactorUserTokenAsync(twoFactorProviderKey, user, twoFactorUserToken);
+
+                        twoFactorCodeIsSent = true;
+                    }
+                }
+            }
+
+            return twoFactorCodeIsSent;
+        }
+
+        public async Task<SignInStatus> SignInWithTwoFactorAuthenticationAsync(string twoFactorProviderKey, string token, bool isPersistentCookie, bool rememberBrowserCookie)
+        {
+            SignInStatus signInStatus;
+
+            var userId = await this.GetTwoFactorAuthenticationUserIdAsync();
+            if (userId == null)
+            {
+                signInStatus = SignInStatus.Failure;
+            }
+            else
+            {
+                using (var dbContextScope = this.DbContextScopeFactory.Create())
+                {
+                    User user = await this.userRepository.FindByIdAsync(userId);
+                    if (user == null)
+                    {
+                        signInStatus = SignInStatus.Failure;
+                    }
+                    else
+                    {
+                        bool userIsLockedOut = user.LockoutEnabled && user.LockoutEndDateUtc >= DateTimeOffset.UtcNow;
+                        if (userIsLockedOut)
+                        {
+                            signInStatus = SignInStatus.LockedOut;
+                        }
+                        else
+                        {
+                            var twoFactorUserTokenIsValid = await this.userTokenTwoFactorProvider.ValidateTwoFactorUserTokenAsync(twoFactorProviderKey, user, token);
+                            if (twoFactorUserTokenIsValid)
+                            {
+                                if (user.AccessFailedCount != 0)
+                                {
+                                    user.AccessFailedCount = 0;
+                                    await this.UpdateAsync(user);
+                                    await dbContextScope.SaveChangesAsync();
+                                }
+
+                                signInStatus = await this.SignInAsync(user, isPersistentCookie, rememberBrowserCookie);
+                            }
+                            else
+                            {
+                                int accessFailedAttempts = user.AccessFailedCount++;
+                                if (accessFailedAttempts >= this.MaxFailedAccessAttemptsBeforeLockout)
+                                {
+                                    user.LockoutEndDateUtc = DateTimeOffset.UtcNow.Add(this.DefaultAccountLockoutTimeSpan).UtcDateTime;
+                                    user.AccessFailedCount = 0;
+                                }
+
+                                await this.UpdateAsync(user);
+                                await dbContextScope.SaveChangesAsync();
+
+                                signInStatus = SignInStatus.Failure;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return signInStatus;
+        }
+
+        public void SignOut()
+        {
+            this.authenticationManager.SignOut(Infrastructure.Identity.Model.AuthenticationType.ApplicationCookie);
+        }
+
+        public async Task<UserExternalLogin> GetUserExternalLoginAsync()
+        {
+            var authenticateResult = await this.authenticationManager.AuthenticateAsync(Infrastructure.Identity.Model.AuthenticationType.ExternalCookie);
+
+            return this.GetUserExternalLogin(authenticateResult);
+        }
+
+        public async Task<UserExternalLogin> GetUserExternalLoginAsync(string xsrfKey, string expectedValue)
+        {
+            var authenticateResult = await this.authenticationManager.AuthenticateAsync(Infrastructure.Identity.Model.AuthenticationType.ExternalCookie);
+
+            return authenticateResult?.Properties?.Dictionary == null
+                || !authenticateResult.Properties.Dictionary.ContainsKey(xsrfKey)
+                || authenticateResult.Properties.Dictionary[xsrfKey] != expectedValue ? null : this.GetUserExternalLogin(authenticateResult);
+        }
+
+        public async Task<SignInStatus> SignInWithUserExternalLoginAsync(UserExternalLogin userExternalLogin, bool isPersistentCookie)
+        {
+            SignInStatus signInStatus;
+
+            using (this.DbContextScopeFactory.CreateReadOnly())
+            {
+                User user = await this.userRepository.FindByLoginAsync(userExternalLogin.LinkedLogin);
+                if (user == null)
+                {
+                    signInStatus = SignInStatus.Failure;
+                }
+                else
+                {
+                    bool userIsLockedOut = user.LockoutEnabled && user.LockoutEndDateUtc >= DateTimeOffset.UtcNow;
+                    if (userIsLockedOut)
+                    {
+                        signInStatus = SignInStatus.LockedOut;
+                    }
+                    else
+                    {
+                        if (user.TwoFactorEnabled)
+                        {
+                            signInStatus = await this.SignInWithTwoFactorCookieAsync(user);
+                        }
+                        else
+                        {
+                            signInStatus = await this.SignInAsync(user, isPersistentCookie, false);
+                        }
+                    }
+                }
+            }
+
+            return signInStatus;
+        }
+
+        public async Task<SignInStatus> SignInWithTwoFactorCookieAsync(User user)
+        {
+            SignInStatus signInStatus = SignInStatus.Failure;
+
+            var validTwoFactorUserTokenProviders = await this.userTokenTwoFactorProvider.GetValidTwoFactorUserTokenProvidersAsync(user);
+            if (validTwoFactorUserTokenProviders.Count > 0)
+            {
+                if (!await this.AuthenticateIdentityAsync(user.Id, Infrastructure.Identity.Model.AuthenticationType.TwoFactorRememberBrowserCookie))
+                {
+                    ClaimsIdentity claimsIdentity = this.CreateUserClaimsIdentity(user.Id, Infrastructure.Identity.Model.AuthenticationType.TwoFactorCookie);
+                    this.authenticationManager.SignIn(claimsIdentity);
+
+                    signInStatus = SignInStatus.RequiresVerification;
+                }
+            }
+
+            return signInStatus;
+        }
+
+        public async Task<SignInStatus> SignInWithUsernameAndPasswordAsync(string userName, string password, bool isPersistentCookie, bool shouldLockout)
+        {
+            SignInStatus signInStatus;
+
+            using (var dbContextScope = this.DbContextScopeFactory.Create())
+            {
+                User user = await this.userRepository.FindByNameAsync(userName);
+                if (user == null)
+                {
+                    signInStatus = SignInStatus.Failure;
+                }
+                else
+                {
+                    bool userIsLockedOut = user.LockoutEnabled && user.LockoutEndDateUtc >= DateTimeOffset.UtcNow;
+                    if (userIsLockedOut)
+                    {
+                        signInStatus = SignInStatus.LockedOut;
+                    }
+                    else
+                    {
+                        if (this.passwordHasher.VerifyHashedPassword(user.PasswordHash, password))
+                        {
+                            if (user.AccessFailedCount != 0)
+                            {
+                                user.AccessFailedCount = 0;
+                                await this.UpdateAsync(user);
+                                await dbContextScope.SaveChangesAsync();
+                            }
+
+                            if (user.TwoFactorEnabled)
+                            {
+                                signInStatus = await this.SignInWithTwoFactorCookieAsync(user);
+                            }
+                            else
+                            {
+                                signInStatus = await this.SignInAsync(user, isPersistentCookie, false);
+                            }
+                        }
+                        else
+                        {
+                            if (shouldLockout)
+                            {
+                                int accessFailedAttempts = user.AccessFailedCount++;
+                                if (accessFailedAttempts >= this.MaxFailedAccessAttemptsBeforeLockout)
+                                {
+                                    user.LockoutEndDateUtc = DateTimeOffset.UtcNow.Add(this.DefaultAccountLockoutTimeSpan).UtcDateTime;
+                                    user.AccessFailedCount = 0;
+                                }
+
+                                await this.UpdateAsync(user);
+                                await dbContextScope.SaveChangesAsync();
+
+                                userIsLockedOut = user.LockoutEnabled && user.LockoutEndDateUtc >= DateTimeOffset.UtcNow;
+                                signInStatus = userIsLockedOut ? SignInStatus.LockedOut : SignInStatus.Failure;
+                            }
+                            else
+                            {
+                                signInStatus = SignInStatus.Failure;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return signInStatus;
+        }
+
+        public virtual async Task<ClaimsIdentity> CreateUserClaimsIdentityAsync(User user)
+        {
+            using (this.DbContextScopeFactory.CreateReadOnly())
+            {
+                var userRoles = await this.userRepository.GetRolesAsync(user);
+                var userClaims = await this.userRepository.GetClaimsAsync(user);
+                var userClaimsIdentity = await this.claimsIdentityFactory.CreateAsync(user, this.AuthenticationType, userRoles, userClaims);
+
+                return userClaimsIdentity;
+            }
+        }
+
+        public async Task<bool> AuthenticateIdentityAsync(string userId, string authenticationType)
+        {
+            var authenticateResult = await this.authenticationManager.AuthenticateAsync(authenticationType);
+
+            return authenticateResult?.Identity != null && this.userIdentityProvider.GetUserId(authenticateResult.Identity) == userId;
+        }
+
+        public IEnumerable<AuthenticationDescription> GetExternalAuthenticationTypes()
+        {
+            return this.authenticationManager.GetAuthenticationTypes(authenticationDescription =>
+            {
+                if (authenticationDescription.Properties != null)
+                {
+                    return authenticationDescription.Properties.ContainsKey("Caption");
+                }
+
+                return false;
+            });
         }
 
         private async Task<IdentityResult> UpdatePasswordAsync(User user, string password)
@@ -937,6 +1232,37 @@
             var securityStamp = Guid.NewGuid().ToString();
 
             return securityStamp;
+        }
+
+        private ClaimsIdentity CreateUserClaimsIdentity(string userId, string authenticationType)
+        {
+            var claimsIdentity = new ClaimsIdentity(authenticationType);
+            claimsIdentity.AddClaim(new Claim(IdentityClaimsNameIdentifier, userId));
+
+            return claimsIdentity;
+        }
+
+        private UserExternalLogin GetUserExternalLogin(AuthenticateResult result)
+        {
+            UserExternalLogin userExternalLogin = null;
+
+            Claim firstClaim = result?.Identity?.FindFirst(IdentityClaimsNameIdentifier);
+            if (firstClaim != null)
+            {
+                string identityName = result.Identity.Name;
+                identityName = identityName?.Replace(" ", string.Empty);
+
+                string emailAddress = result.Identity.FindFirst(IdentityClaimsEmailAddressIdentifier)?.Value;
+                userExternalLogin = new UserExternalLogin
+                {
+                    ExternalIdentity = result.Identity,
+                    LinkedLogin = new UserLinkedLogin(firstClaim.Issuer, firstClaim.Value),
+                    DefaultUserName = identityName,
+                    Email = emailAddress
+                };
+            }
+
+            return userExternalLogin;
         }
     }
 }

@@ -3,6 +3,8 @@ namespace Perfectial.Presentation.Web
     using System.Threading.Tasks;
 
     using Perfectial.Infrastructure.Identity;
+    using Perfectial.Infrastructure.Identity.Base;
+    using Perfectial.Infrastructure.Identity.Model;
 
     public class SmsService : IIdentityMessageService
     {

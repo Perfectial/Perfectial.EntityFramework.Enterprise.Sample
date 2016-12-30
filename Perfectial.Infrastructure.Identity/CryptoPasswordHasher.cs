@@ -57,7 +57,7 @@ namespace Perfectial.Infrastructure.Identity
         [MethodImpl(MethodImplOptions.NoOptimization)]
         private bool ByteArraysEqual(byte[] a, byte[] b)
         {
-            if (object.ReferenceEquals(a, b))
+            if (ReferenceEquals(a, b))
             {
                 return true;
             }
