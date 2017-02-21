@@ -1,9 +1,11 @@
 ﻿namespace Perfectial.Infrastructure.Persistence.EntityFramework
 {
+    using System;
     using System.Data;
     using System.Data.Entity;
     using System.Data.Entity.Core.Objects;
     using System.Data.Entity.Infrastructure;
+    using System.Linq;
     using System.Threading.Tasks;
 
     using Perfectial.Domain.Model;
@@ -22,6 +24,12 @@
             : base(connectionString)
         {
         }
+
+        public IDbSet<Student> Students { get; set; }
+        public IDbSet<StudentAddress> StudentAddresses { get; set; }
+        public IDbSet<Standard> Standards { get; set; }
+        public IDbSet<Teacher> Teachers { get; set; }
+        public IDbSet<Course> Courses { get; set; }
 
         public IDbSet<ToDoItem> ToDoItems { get; set; }
         public IDbSet<User> Users { get; set; }
@@ -43,8 +51,8 @@
         public bool TryGetObjectStateEntry(object entity, out IDbObjectStateEntry dbObjectStateEntry)
         {
             ObjectStateEntry objectStateEntry;
-            dbObjectStateEntry = ((IObjectContextAdapter)this).ObjectContext.ObjectStateManager.TryGetObjectStateEntry(entity, out objectStateEntry) ? 
-                this.ToDbObjectStateEntry(objectStateEntry) : 
+            dbObjectStateEntry = ((IObjectContextAdapter)this).ObjectContext.ObjectStateManager.TryGetObjectStateEntry(entity, out objectStateEntry) ?
+                this.ToDbObjectStateEntry(objectStateEntry) :
                 null;
 
             return dbObjectStateEntry != null;

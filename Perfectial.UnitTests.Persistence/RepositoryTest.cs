@@ -40,6 +40,11 @@
             this.repository = new Repository<ApplicationDbContext, ToDoItem, int>(this.ambientDbContextLocator);
 
             Database.SetInitializer(new ApplicationDbInitializer());
+            using (var dbContextScope = this.dbContextScopeFactory.Create())
+            {
+                var dbContext = dbContextScope.DbContexts.Get<ApplicationDbContext>();
+                dbContext.Database.Initialize(true);
+            }
         }
 
         [TestFixtureTearDown]
@@ -79,7 +84,7 @@
         }
 
         [Test]
-        public async void ShouldGetAllListAsync()
+        public async Task ShouldGetAllListAsync()
         {
             this.AddEntities();
 
@@ -119,7 +124,7 @@
         }
 
         [Test]
-        public async void ShouldGetAllListWithPredicateAsync()
+        public async Task ShouldGetAllListWithPredicateAsync()
         {
             var originalEntities = this.CreateEntities(NumberOfEntitiesToCreate);
             var entityDescription = Faker.Lorem.Sentence();
@@ -160,7 +165,7 @@
         }
 
         [Test]
-        public async void ShouldGetByIdAsync()
+        public async Task ShouldGetByIdAsync()
         {
             var originalEntity = this.AddEntity();
             using (this.dbContextScopeFactory.CreateReadOnly())
@@ -187,7 +192,7 @@
         }
 
         [Test]
-        public async void ShouldGetSingleAsync()
+        public async Task ShouldGetSingleAsync()
         {
             var originalEntities = this.AddEntities();
             var originalEntity = originalEntities.First();
@@ -218,7 +223,7 @@
         }
 
         [Test]
-        public async void ShouldGetFirstOrDefaultAsync()
+        public async Task ShouldGetFirstOrDefaultAsync()
         {
             var originalEntities = this.AddEntities();
             var originalEntity = originalEntities.First();
@@ -252,7 +257,7 @@
         }
 
         [Test]
-        public async void ShouldGetFirstOrDefaultWithPredicateAsync()
+        public async Task ShouldGetFirstOrDefaultWithPredicateAsync()
         {
             var originalEntities = this.AddEntities();
             var originalEntity = originalEntities.First();
@@ -312,7 +317,7 @@
         }
 
         [Test]
-        public async void ShouldAddAsync()
+        public async Task ShouldAddAsync()
         {
             var originalEntity = await this.AddEntityAsync();
             using (this.dbContextScopeFactory.CreateReadOnly())
@@ -357,7 +362,7 @@
         }
 
         [Test]
-        public async void ShouldAddRangeAsync()
+        public async Task ShouldAddRangeAsync()
         {
             var originalEntity1 = this.CreateEntity();
             var originalEntity2 = this.CreateEntity();
@@ -425,7 +430,7 @@
         }
 
         [Test]
-        public async void ShouldAddOrUpdateAsync()
+        public async Task ShouldAddOrUpdateAsync()
         {
             var originalEntity = this.CreateEntity();
             using (var dbContextScope = this.dbContextScopeFactory.Create())
@@ -490,7 +495,7 @@
         }
 
         [Test]
-        public async void ShouldUpdateAsync()
+        public async Task ShouldUpdateAsync()
         {
             var originalEntity = await this.AddEntityAsync();
 
@@ -544,7 +549,7 @@
         }
 
         [Test]
-        public async void ShouldDeleteAsync()
+        public async Task ShouldDeleteAsync()
         {
             var originalEntity = await this.AddEntityAsync();
 
@@ -594,7 +599,7 @@
         }
 
         [Test]
-        public async void ShouldDeleteByIdAsync()
+        public async Task ShouldDeleteByIdAsync()
         {
             var originalEntity = await this.AddEntityAsync();
 
@@ -645,7 +650,7 @@
         }
 
         [Test]
-        public async void ShouldDeleteByPredicateAsync()
+        public async Task ShouldDeleteByPredicateAsync()
         {
             var originalEntity = await this.AddEntityAsync();
 
@@ -720,7 +725,7 @@
         }
 
         [Test]
-        public async void ShouldDeleteRangeAsync()
+        public async Task ShouldDeleteRangeAsync()
         {
             var originalEntity1 = this.CreateEntity();
             var originalEntity2 = this.CreateEntity();
@@ -781,7 +786,7 @@
         }
 
         [Test]
-        public async void ShouldCountAsync()
+        public async Task ShouldCountAsync()
         {
             await this.AddEntityAsync();
             using (this.dbContextScopeFactory.CreateReadOnly())
@@ -805,7 +810,7 @@
         }
 
         [Test]
-        public async void ShouldCountWithPredicateAsync()
+        public async Task ShouldCountWithPredicateAsync()
         {
             var originalEntity = await this.AddEntityAsync();
             using (this.dbContextScopeFactory.CreateReadOnly())

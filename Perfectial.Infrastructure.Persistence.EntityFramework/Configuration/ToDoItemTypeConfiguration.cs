@@ -5,19 +5,18 @@
 
     using Perfectial.Domain.Model;
 
-    public class ToDoItemFluentMap : EntityTypeConfiguration<ToDoItem>
+    public class ToDoItemTypeConfiguration : EntityTypeConfiguration<ToDoItem>
     {
-        public ToDoItemFluentMap()
+        public ToDoItemTypeConfiguration()
         {
             this.HasKey(t => t.Id);
 
             this.Property(entity => entity.Id).HasDatabaseGeneratedOption(DatabaseGeneratedOption.Identity);
-
             this.Property(entity => entity.Description).IsRequired();
 
-            this.ToTable("ToDoItem");
+            this.HasOptional(entity => entity.AssignedUser).WithMany(entity => entity.ToDoItems).HasForeignKey(entity => entity.AssignedUserId);
 
-            // TODO: Extend with Constraints, References configuration.
+            this.ToTable("ToDoItem");
         }
     }
 }

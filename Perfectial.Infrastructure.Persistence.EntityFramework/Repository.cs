@@ -1,8 +1,11 @@
 namespace Perfectial.Infrastructure.Persistence.EntityFramework
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Data.Entity;
+    using System.Data.Entity.Core.Metadata.Edm;
+    using System.Data.Entity.Infrastructure;
     using System.Linq;
     using System.Linq.Expressions;
     using System.Threading.Tasks;
@@ -39,34 +42,34 @@ namespace Perfectial.Infrastructure.Persistence.EntityFramework
             }
         }
 
-        private DbSet<TEntity> DbSet => this.DbContext.Set<TEntity>();
+        protected DbSet<TEntity> DbSet => this.DbContext.Set<TEntity>();
 
-        public IQueryable<TEntity> GetAll()
+        public virtual IQueryable<TEntity> GetAll()
         {
             return this.DbSet.AsQueryable();
         }
 
-        public List<TEntity> GetAllList()
+        public virtual List<TEntity> GetAllList()
         {
             return this.GetAll().ToList();
         }
 
-        public Task<List<TEntity>> GetAllListAsync()
+        public virtual Task<List<TEntity>> GetAllListAsync()
         {
             return this.GetAll().ToListAsync();
         }
 
-        public List<TEntity> GetAllList(Expression<Func<TEntity, bool>> predicate)
+        public virtual List<TEntity> GetAllList(Expression<Func<TEntity, bool>> predicate)
         {
             return this.GetAll().Where(predicate).ToList();
         }
 
-        public Task<List<TEntity>> GetAllListAsync(Expression<Func<TEntity, bool>> predicate)
+        public virtual Task<List<TEntity>> GetAllListAsync(Expression<Func<TEntity, bool>> predicate)
         {
             return this.GetAll().Where(predicate).ToListAsync();
         }
 
-        public TEntity Get(TPrimaryKey id)
+        public virtual TEntity Get(TPrimaryKey id)
         {
             TEntity entity = this.FirstOrDefault(id);
             if ((object)entity == null)
@@ -77,7 +80,7 @@ namespace Perfectial.Infrastructure.Persistence.EntityFramework
             return entity;
         }
 
-        public async Task<TEntity> GetAsync(TPrimaryKey id)
+        public virtual async Task<TEntity> GetAsync(TPrimaryKey id)
         {
             TEntity entity = await this.FirstOrDefaultAsync(id);
             if ((object)entity == null)
@@ -88,76 +91,76 @@ namespace Perfectial.Infrastructure.Persistence.EntityFramework
             return entity;
         }
 
-        public TEntity Single(Expression<Func<TEntity, bool>> predicate)
+        public virtual TEntity Single(Expression<Func<TEntity, bool>> predicate)
         {
             return this.GetAll().Single(predicate);
         }
 
-        public Task<TEntity> SingleAsync(Expression<Func<TEntity, bool>> predicate)
+        public virtual Task<TEntity> SingleAsync(Expression<Func<TEntity, bool>> predicate)
         {
             return this.GetAll().SingleAsync(predicate);
         }
 
-        public TEntity FirstOrDefault(TPrimaryKey id)
+        public virtual TEntity FirstOrDefault(TPrimaryKey id)
         {
             return this.GetAll().FirstOrDefault(e => e.Id.CompareTo(id) == 0);
         }
 
-        public Task<TEntity> FirstOrDefaultAsync(TPrimaryKey id)
+        public virtual Task<TEntity> FirstOrDefaultAsync(TPrimaryKey id)
         {
             return this.GetAll().FirstOrDefaultAsync(e => e.Id.CompareTo(id) == 0);
         }
 
-        public TEntity FirstOrDefault(Expression<Func<TEntity, bool>> predicate)
+        public virtual TEntity FirstOrDefault(Expression<Func<TEntity, bool>> predicate)
         {
             return this.GetAll().FirstOrDefault(predicate);
         }
 
-        public Task<TEntity> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate)
+        public virtual Task<TEntity> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate)
         {
             return this.GetAll().FirstOrDefaultAsync(predicate);
         }
 
-        public void Attach(TEntity entity)
+        public virtual void Attach(TEntity entity)
         {
             this.DbSet.Attach(entity);
         }
 
-        public TEntity Add(TEntity entity)
+        public virtual TEntity Add(TEntity entity)
         {
-            this.DbContext.Entry(entity).State = EntityState.Added;
+            this.AttachNavigationProperty(entity);
 
             return this.DbSet.Add(entity);
         }
 
-        public Task<TEntity> AddAsync(TEntity entity)
+        public virtual Task<TEntity> AddAsync(TEntity entity)
         {
-            this.DbContext.Entry(entity).State = EntityState.Added;
+            this.AttachNavigationProperty(entity);
 
             return Task.FromResult(this.DbSet.Add(entity));
         }
 
-        public IEnumerable<TEntity> AddRange(IList<TEntity> entities)
+        public virtual IEnumerable<TEntity> AddRange(IList<TEntity> entities)
         {
             foreach (var entity in entities)
             {
-                this.DbContext.Entry(entity).State = EntityState.Added;
+                this.AttachNavigationProperty(entity);
             }
 
             return this.DbSet.AddRange(entities);
         }
 
-        public Task<IEnumerable<TEntity>> AddRangeAsync(IList<TEntity> entities)
+        public virtual Task<IEnumerable<TEntity>> AddRangeAsync(IList<TEntity> entities)
         {
             foreach (var entity in entities)
             {
-                this.DbContext.Entry(entity).State = EntityState.Added;
+                this.AttachNavigationProperty(entity);
             }
 
             return Task.FromResult(this.DbSet.AddRange(entities));
         }
 
-        public TEntity AddOrUpdate(TEntity entity)
+        public virtual TEntity AddOrUpdate(TEntity entity)
         {
             if (!entity.IsTransient())
             {
@@ -167,7 +170,7 @@ namespace Perfectial.Infrastructure.Persistence.EntityFramework
             return this.Add(entity);
         }
 
-        public async Task<TEntity> AddOrUpdateAsync(TEntity entityToAddUpdate)
+        public virtual async Task<TEntity> AddOrUpdateAsync(TEntity entityToAddUpdate)
         {
             TEntity entity;
             if (!entityToAddUpdate.IsTransient())
@@ -182,54 +185,51 @@ namespace Perfectial.Infrastructure.Persistence.EntityFramework
             return entity;
         }
 
-        public TEntity Update(TEntity entity)
+        public virtual TEntity Update(TEntity entity)
         {
-            this.Attach(entity);
+            var entityToUpdate = this.DbSet.Find(entity.Id);
+            this.DbContext.Entry(entityToUpdate).CurrentValues.SetValues(entity);
 
-            this.DbContext.Entry(entity).State = EntityState.Modified;
-
-            return entity;
+            return entityToUpdate;
         }
 
-        public Task<TEntity> UpdateAsync(TEntity entity)
+        public virtual Task<TEntity> UpdateAsync(TEntity entity)
         {
-            this.Attach(entity);
+            var entityToUpdate = this.DbSet.Find(entity.Id);
+            this.DbContext.Entry(entityToUpdate).CurrentValues.SetValues(entity);
 
-            this.DbContext.Entry(entity).State = EntityState.Modified;
-
-            return Task.FromResult(entity);
+            return Task.FromResult(entityToUpdate);
         }
 
-        public void Delete(TEntity entity)
+        public virtual void Delete(TEntity entity)
         {
             this.DbSet.Attach(entity);
-            this.DbContext.Entry(entity).State = EntityState.Deleted;
-
+            
             this.DbSet.Remove(entity);
         }
 
-        public Task DeleteAsync(TEntity entity)
+        public virtual Task DeleteAsync(TEntity entity)
         {
             this.Delete(entity);
 
             return Task.FromResult(0);
         }
 
-        public void Delete(TPrimaryKey id)
+        public virtual void Delete(TPrimaryKey id)
         {
             var entity = this.DbSet.Find(id);
 
             this.Delete(entity);
         }
 
-        public Task DeleteAsync(TPrimaryKey id)
+        public virtual Task DeleteAsync(TPrimaryKey id)
         {
             this.Delete(id);
 
             return Task.FromResult(0);
         }
 
-        public void Delete(Expression<Func<TEntity, bool>> predicate)
+        public virtual void Delete(Expression<Func<TEntity, bool>> predicate)
         {
             foreach (TEntity entity in this.GetAll().Where(predicate).ToList())
             {
@@ -237,49 +237,120 @@ namespace Perfectial.Infrastructure.Persistence.EntityFramework
             }
         }
 
-        public Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
+        public virtual Task DeleteAsync(Expression<Func<TEntity, bool>> predicate)
         {
             this.Delete(predicate);
 
             return Task.FromResult(0);
         }
 
-        public void DeleteRange(IList<TEntity> entities)
+        public virtual void DeleteRange(IList<TEntity> entities)
         {
             foreach (var entity in entities)
             {
                 this.DbSet.Attach(entity);
-                this.DbContext.Entry(entity).State = EntityState.Deleted;
             }
 
             this.DbSet.RemoveRange(entities);
         }
 
-        public Task DeleteRangeAsync(IList<TEntity> entities)
+        public virtual Task DeleteRangeAsync(IList<TEntity> entities)
         {
             this.DeleteRange(entities);
 
             return Task.FromResult(0);
         }
 
-        public int Count()
+        public virtual int Count()
         {
             return this.GetAll().Count();
         }
 
-        public Task<int> CountAsync()
+        public virtual Task<int> CountAsync()
         {
             return this.GetAll().CountAsync();
         }
 
-        public int Count(Expression<Func<TEntity, bool>> predicate)
+        public virtual int Count(Expression<Func<TEntity, bool>> predicate)
         {
             return this.GetAll().Where(predicate).Count();
         }
 
-        public Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate)
+        public virtual Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate)
         {
             return this.GetAll().Where(predicate).CountAsync();
+        }
+
+        private void AttachNavigationProperty(TEntity entity)
+        {
+            var entityNavigationProperties = this.GetNavigationProperties<TEntity>();
+            foreach (var entityNavigationProperty in entityNavigationProperties)
+            {
+                var entityProperty = typeof(TEntity).GetProperty(entityNavigationProperty.Name);
+                var entityNavigationObject = entityProperty.GetValue(entity);
+
+                if (entityNavigationObject != null)
+                {
+                    if (entityNavigationProperty.FromEndMember.RelationshipMultiplicity == RelationshipMultiplicity.Many
+                    && entityNavigationProperty.ToEndMember.RelationshipMultiplicity == RelationshipMultiplicity.Many)
+                    {
+                        var entityNavigationCollection = entityNavigationObject as IEnumerable;
+                        if (entityNavigationCollection != null)
+                        {
+                            foreach (var entityNavigationCollectionItem in entityNavigationCollection)
+                            {
+                                this.AttachNavigationProperty(entity, entityNavigationCollectionItem);
+                            }
+                        }
+                    }
+                    else if ((entityNavigationProperty.FromEndMember.RelationshipMultiplicity == RelationshipMultiplicity.One
+                                || entityNavigationProperty.FromEndMember.RelationshipMultiplicity == RelationshipMultiplicity.ZeroOrOne)
+                                && entityNavigationProperty.ToEndMember.RelationshipMultiplicity == RelationshipMultiplicity.Many)
+                    {
+                        var entityNavigationCollection = entityNavigationObject as IEnumerable;
+                        if (entityNavigationCollection != null)
+                        {
+                            foreach (var entityNavigationCollectionItem in entityNavigationCollection)
+                            {
+                                this.AttachNavigationProperty(entity, entityNavigationCollectionItem);
+                            }
+                        }
+                    }
+                    else if (entityNavigationProperty.FromEndMember.RelationshipMultiplicity == RelationshipMultiplicity.Many
+                                && (entityNavigationProperty.ToEndMember.RelationshipMultiplicity == RelationshipMultiplicity.One
+                                || entityNavigationProperty.ToEndMember.RelationshipMultiplicity == RelationshipMultiplicity.ZeroOrOne))
+                    {
+                        this.AttachNavigationProperty(entity, entityNavigationObject);
+                    }
+                    else
+                    {
+                    }
+                }
+            }
+        }
+
+        private void AttachNavigationProperty(TEntity entity, object entityNavigationObject)
+        {
+            var entityNavigationObjectIdProperty = entityNavigationObject.GetType().GetProperty(nameof(entity.Id));
+            var entityNavigationObjectId = entityNavigationObjectIdProperty.GetValue(entityNavigationObject);
+            if (entityNavigationObjectId != null)
+            {
+                var defaultId = Activator.CreateInstance(entityNavigationObjectId.GetType());
+
+                if (entityNavigationObjectId != defaultId)
+                {
+                    this.DbContext.Set(entityNavigationObject.GetType()).Attach(entityNavigationObject);
+                }
+            }
+        }
+
+        private IEnumerable<NavigationProperty> GetNavigationProperties<T>() where T : class
+        {
+            var entityType = ((IObjectContextAdapter)this.DbContext).ObjectContext.MetadataWorkspace
+                               .GetItems(DataSpace.OSpace).OfType<EntityType>()
+                               .FirstOrDefault(e => e.Name == typeof(T).Name);
+
+            return entityType != null ? entityType.NavigationProperties : Enumerable.Empty<NavigationProperty>();
         }
     }
 }

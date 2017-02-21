@@ -1,6 +1,7 @@
 ﻿namespace Perfectial.Domain.Model
 {
     using System;
+    using System.Collections.Generic;
 
     public class User : UserBase<string, UserLogin, UserRole, UserClaim>
     {
@@ -9,9 +10,6 @@
             this.Id = Guid.NewGuid().ToString();
         }
 
-        public User(string userName) : this()
-        {
-            this.UserName = userName;
-        }
+        public virtual ICollection<ToDoItem> ToDoItems { get; set; } = new List<ToDoItem>();
     }
 }

@@ -58,7 +58,12 @@
             // Overrides for the convention-based mappings.
             // We're assuming that all our fluent mappings are declared in this assembly.
             // modelBuilder.Configurations.AddFromAssembly(Assembly.GetAssembly(typeof(ApplicationDbContext)));
-            modelBuilder.Configurations.Add(new ToDoItemFluentMap());
+            modelBuilder.Configurations.Add(new ToDoItemTypeConfiguration());
+            modelBuilder.Configurations.Add(new StudentTypeConfiguration());
+            modelBuilder.Configurations.Add(new StudentAddressTypeConfiguration());
+            modelBuilder.Configurations.Add(new StandardTypeConfiguration());
+            modelBuilder.Configurations.Add(new TeacherTypeConfiguration());
+            modelBuilder.Configurations.Add(new CourseTypeConfiguration());
         }
 
         private static void ConfigureRelations(DbModelBuilder modelBuilder)

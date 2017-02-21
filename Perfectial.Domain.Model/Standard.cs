@@ -1,25 +1,23 @@
 ﻿namespace Perfectial.Domain.Model
 {
     using System;
+    using System.Collections.Generic;
 
-    public class ToDoItem : EntityBase<int>
+    public class Standard : EntityBase<int>
     {
-        public ToDoItem()
+        public Standard()
         {
-            this.CreationTime = DateTime.UtcNow;
-            this.State = ToDoItemState.Active;
         }
 
+        public string Name { get; set; }
         public string Description { get; set; }
-        public DateTime CreationTime { get; set; }
-        public ToDoItemState State { get; set; }
 
-        public string AssignedUserId { get; set; }
-        public virtual User AssignedUser { get; set; }
+        public virtual ICollection<Student> Students { get; set; } = new List<Student>();
+        public virtual ICollection<Teacher> Teachers { get; set; } = new List<Teacher>();
 
         public override bool Equals(object obj)
         {
-            if (!(obj is ToDoItem))
+            if (!(obj is Standard))
             {
                 return false;
             }
@@ -29,7 +27,7 @@
                 return true;
             }
 
-            ToDoItem entity = (ToDoItem)obj;
+            Standard entity = (Standard)obj;
             if (this.IsTransient() && entity.IsTransient())
             {
                 return false;
@@ -42,7 +40,7 @@
                 return false;
             }
 
-            return this.Equals((ToDoItem)obj);
+            return this.Equals((Standard)obj);
         }
 
         public override int GetHashCode()
@@ -50,19 +48,18 @@
             unchecked
             {
                 int hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (this.Name?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (this.Description?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (int)this.State;
-                hashCode = (hashCode * 397) ^ this.CreationTime.GetHashCode();
+
                 return hashCode;
             }
         }
 
-        protected bool Equals(ToDoItem other)
+        protected bool Equals(Standard other)
         {
-            return base.Equals(other)
-                && string.Equals(this.Description, other.Description)
-                && this.State == other.State
-                && string.Equals(this.CreationTime.ToString("G"), other.CreationTime.ToString("G"));
+            return base.Equals(other) 
+                   && string.Equals(this.Name, other.Name) 
+                   && string.Equals(this.Description, other.Description);
         }
     }
 }

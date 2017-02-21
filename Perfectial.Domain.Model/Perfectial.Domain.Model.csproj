@@ -34,6 +34,7 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data.Entity" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -44,6 +45,11 @@
   <ItemGroup>
     <Compile Include="IUser.cs" />
     <Compile Include="Role.cs" />
+    <Compile Include="Course.cs" />
+    <Compile Include="Teacher.cs" />
+    <Compile Include="Standard.cs" />
+    <Compile Include="StudentAddress.cs" />
+    <Compile Include="Student.cs" />
     <Compile Include="User.cs" />
     <Compile Include="UserClaim.cs" />
     <Compile Include="UserLogin.cs" />

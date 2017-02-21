@@ -63,6 +63,8 @@
   <ItemGroup>
     <Compile Include="ApplicationDbInitializer.cs" />
     <Compile Include="DbContextScopeTest.cs" />
+    <Compile Include="OneToOneRelationshipRepositoryTest.cs" />
+    <Compile Include="OneToManyRelationshipRepositoryTest.cs" />
     <Compile Include="RepositoryTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

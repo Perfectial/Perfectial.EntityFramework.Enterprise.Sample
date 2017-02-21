@@ -32,6 +32,11 @@
             this.dbContextScopeFactory = new DbContextScopeFactory();
 
             Database.SetInitializer(new ApplicationDbInitializer());
+            using (var dbContextScope = this.dbContextScopeFactory.Create())
+            {
+                var dbContext = dbContextScope.DbContexts.Get<ApplicationDbContext>();
+                dbContext.Database.Initialize(true);
+            }
         }
 
         [TestFixtureTearDown]

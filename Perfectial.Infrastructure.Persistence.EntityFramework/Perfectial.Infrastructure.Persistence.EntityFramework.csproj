@@ -55,7 +55,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ApplicationDbContext.cs" />
-    <Compile Include="Configuration\ToDoItemFluentMap.cs" />
+    <Compile Include="Configuration\StudentAddressTypeConfiguration.cs" />
+    <Compile Include="Configuration\StandardTypeConfiguration.cs" />
+    <Compile Include="Configuration\CourseTypeConfiguration.cs" />
+    <Compile Include="Configuration\TeacherTypeConfiguration.cs" />
+    <Compile Include="Configuration\StudentTypeConfiguration.cs" />
+    <Compile Include="Configuration\ToDoItemTypeConfiguration.cs" />
     <Compile Include="DbTransaction.cs" />
     <Compile Include="DbObjectStateEntry.cs" />
     <Compile Include="IApplicationDbContext.cs" />
